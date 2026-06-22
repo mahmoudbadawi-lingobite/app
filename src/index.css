@@ -1,0 +1,263 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LingoBite Premium Color Palette */
+    --navy: 216 48% 11%;
+    --gold: 42 56% 51%;
+    --cream: 36 55% 96%;
+    --white: 0 0% 100%;
+    --success: 150 48% 44%;
+    
+    --background: 36 55% 96%;
+    --foreground: 216 48% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 216 48% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 48% 11%;
+    --primary: 216 48% 11%;
+    --primary-foreground: 36 55% 96%;
+    --secondary: 42 56% 51%;
+    --secondary-foreground: 216 48% 11%;
+    --muted: 36 30% 90%;
+    --muted-foreground: 216 20% 40%;
+    --accent: 42 56% 51%;
+    --accent-foreground: 216 48% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 36 30% 85%;
+    --input: 36 30% 85%;
+    --ring: 42 56% 51%;
+    --radius: 1.2rem;
+    --sidebar-background: 216 48% 11%;
+    --sidebar-foreground: 36 55% 96%;
+    --sidebar-primary: 42 56% 51%;
+    --sidebar-primary-foreground: 216 48% 11%;
+    --sidebar-accent: 216 40% 18%;
+    --sidebar-accent-foreground: 36 55% 96%;
+    --sidebar-border: 216 40% 22%;
+    --sidebar-ring: 42 56% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+@layer components {
+  .lb-card {
+    @apply bg-white rounded-[1.2rem] shadow-[0_4px_24px_rgba(13,27,42,0.08)] border border-transparent;
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .lb-card:hover {
+    @apply shadow-[0_8px_32px_rgba(13,27,42,0.14)];
+    @apply border-[#c9993f]/20;
+  }
+  
+  .lb-navy {
+    background-color: #0d1b2a;
+    color: #faf6ef;
+  }
+  
+  .lb-gold {
+    background-color: #c9993f;
+    color: #0d1b2a;
+  }
+  
+  .lb-cream {
+    background-color: #faf6ef;
+    color: #0d1b2a;
+  }
+  
+  .lb-success {
+    background-color: #38a169;
+    color: #ffffff;
+  }
+  
+  .lb-btn-primary {
+    @apply px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200;
+    background-color: #0d1b2a;
+    color: #faf6ef;
+  }
+  
+  .lb-btn-primary:hover {
+    background-color: #1a2d42;
+    @apply shadow-lg;
+  }
+  
+  .lb-btn-gold {
+    @apply px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200;
+    background-color: #c9993f;
+    color: #0d1b2a;
+  }
+  
+  .lb-btn-gold:hover {
+    background-color: #d4a84f;
+    @apply shadow-lg;
+  }
+  
+  .lb-btn-outline {
+    @apply px-6 py-3 rounded-xl font-medium text-sm border-2 transition-all duration-200;
+    border-color: #0d1b2a;
+    color: #0d1b2a;
+    background: transparent;
+  }
+  
+  .lb-btn-outline:hover {
+    background-color: #0d1b2a;
+    color: #faf6ef;
+  }
+  
+  .lb-input {
+    @apply w-full px-4 py-3 rounded-xl border-2 transition-all duration-200;
+    @apply focus:outline-none focus:ring-2;
+    border-color: #e5ddd0;
+    background: #ffffff;
+  }
+  
+  .lb-input:focus {
+    border-color: #c9993f;
+    @apply ring-[#c9993f]/20;
+  }
+  
+  .lb-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  
+  .lb-badge-practiced {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+  }
+  
+  .lb-badge-reviewed {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+  }
+  
+  .lb-badge-graded {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+  }
+  
+  .lb-gradient-text {
+    background: linear-gradient(135deg, #0d1b2a 0%, #c9993f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .lb-audio-visualizer {
+    @apply flex items-end gap-[2px] h-12;
+  }
+  
+  .lb-audio-bar {
+    @apply w-1 rounded-full transition-all duration-75;
+    background: linear-gradient(to top, #c9993f, #0d1b2a);
+  }
+  
+  .lb-recording-indicator {
+    @apply w-3 h-3 rounded-full animate-pulse;
+    background-color: #e53e3e;
+  }
+  
+  .lb-status-dot {
+    @apply w-2.5 h-2.5 rounded-full;
+  }
+  
+  .lb-section-divider {
+    @apply h-px w-full;
+    background: linear-gradient(to right, transparent, #c9993f, transparent);
+  }
+  
+  .lb-peer-emoji-btn {
+    @apply w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all duration-200;
+    @apply hover:scale-110 hover:bg-amber-50;
+  }
+  
+  .lb-peer-emoji-btn.active {
+    @apply bg-amber-100 scale-110;
+  }
+  
+  .lb-progress-bar {
+    @apply h-2 rounded-full overflow-hidden;
+    background-color: #e5ddd0;
+  }
+  
+  .lb-progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: linear-gradient(to right, #c9993f, #0d1b2a);
+  }
+  
+  .lb-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .lb-scroll::-webkit-scrollbar-track {
+    @apply rounded-full;
+    background: #f0ebe3;
+  }
+  
+  .lb-scroll::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: #c9993f;
+  }
+  
+  .lb-annotation-dot {
+    @apply absolute w-5 h-5 rounded-full border-2 border-white shadow-md cursor-pointer transition-all duration-200;
+    @apply hover:scale-125 hover:z-10;
+  }
+  
+  .lb-tooltip {
+    @apply absolute z-50 px-3 py-2 rounded-lg text-xs font-medium shadow-lg;
+    background-color: #0d1b2a;
+    color: #faf6ef;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms, visibility 200ms;
+  }
+
+  .lb-tooltip.is-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .lb-grade-card {
+    @apply p-6 rounded-[1.2rem] border-2 transition-all duration-300;
+    border-color: #e5ddd0;
+    background: #ffffff;
+  }
+  
+  .lb-grade-card:hover {
+    border-color: #c9993f;
+    @apply shadow-lg;
+  }
+  
+  .lb-score-circle {
+    @apply w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold;
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  
+  .font-sans {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
