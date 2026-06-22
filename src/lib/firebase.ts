@@ -32,29 +32,21 @@ import {
   type QuerySnapshot,
   type DocumentData,
 } from 'firebase/firestore';
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage';
 
 // --- Firebase Config ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCbI63tLgAIx6ZdrZEi9tO0lW_5lzcDxPw",
+  apiKey: "AIzaSyDxFfa9PmUKdZlL1fOLTNoMmmUkI7nsZNE",
   authDomain: "lingobite-app.firebaseapp.com",
   projectId: "lingobite-app",
-  storageBucket: "lingobite-app.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456",
+  storageBucket: "lingobite-app.firebasestorage.app",
+  messagingSenderId: "690209347942",
+  appId: "1:690209347942:web:780cc79a0f67dc4a0dd0a7",
 };
 
 // --- Initialize ---
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // --- Auth Helpers ---
@@ -64,7 +56,10 @@ export const onAuthChange = (cb: (user: FirebaseUser | null) => void) =>
   onAuthStateChanged(auth, cb);
 
 // --- Firestore Helpers ---
-export const createUserProfile = async (user: FirebaseUser, role: 'student' | 'teacher' = 'student') => {
+export const createUserProfile = async (
+  user: FirebaseUser,
+  role: 'student' | 'teacher' = 'student'
+) => {
   const userRef = doc(db, 'users', user.uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) {
@@ -93,9 +88,18 @@ export const getUserProfile = async (uid: string) => {
 };
 
 export const getLessons = async (type?: string) => {
-  let q = query(collection(db, 'lessons'), where('status', '==', 'published'), orderBy('order', 'asc'));
+  let q = query(
+    collection(db, 'lessons'),
+    where('status', '==', 'published'),
+    orderBy('order', 'asc')
+  );
   if (type) {
-    q = query(collection(db, 'lessons'), where('status', '==', 'published'), where('type', '==', type), orderBy('order', 'asc'));
+    q = query(
+      collection(db, 'lessons'),
+      where('status', '==', 'published'),
+      where('type', '==', type),
+      orderBy('order', 'asc')
+    );
   }
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -114,7 +118,10 @@ export const createSubmission = async (data: Omit<DocumentData, 'id'>) => {
   });
 };
 
-export const updateSubmission = async (submissionId: string, data: Partial<DocumentData>) => {
+export const updateSubmission = async (
+  submissionId: string,
+  data: Partial<DocumentData>
+) => {
   await updateDoc(doc(db, 'student_submissions', submissionId), {
     ...data,
     updatedAt: serverTimestamp(),
@@ -151,17 +158,6 @@ export const getPendingSubmissions = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
-// --- Storage Helpers ---
-export const uploadAudioRecording = async (blob: Blob, path: string): Promise<string> => {
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, blob);
-  return await getDownloadURL(storageRef);
-};
-
-export const deleteAudioRecording = async (path: string) => {
-  await deleteObject(ref(storage, path));
-};
-
 // --- Peer Reviews ---
 export const addPeerReview = async (data: Omit<DocumentData, 'id'>) => {
   return await addDoc(collection(db, 'peer_reviews'), {
@@ -182,7 +178,9 @@ export const getPeerReviewsForSubmission = async (submissionId: string) => {
 
 // --- Badges ---
 export const getAllBadges = async () => {
-  const snap = await getDocs(query(collection(db, 'badges'), orderBy('tier', 'asc')));
+  const snap = await getDocs(
+    query(collection(db, 'badges'), orderBy('tier', 'asc'))
+  );
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
@@ -190,7 +188,6 @@ export const awardBadgeToUser = async (userId: string, badgeId: string) => {
   const userRef = doc(db, 'users', userId);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) return;
-  
   const userData = userSnap.data();
   const badges = userData.badges || [];
   if (!badges.includes(badgeId)) {
@@ -200,7 +197,10 @@ export const awardBadgeToUser = async (userId: string, badgeId: string) => {
 };
 
 // --- Real-time Subscriptions ---
-export const subscribeToSubmissions = (studentId: string, callback: (docs: QuerySnapshot<DocumentData>) => void) => {
+export const subscribeToSubmissions = (
+  studentId: string,
+  callback: (docs: QuerySnapshot<DocumentData>) => void
+) => {
   const q = query(
     collection(db, 'student_submissions'),
     where('studentId', '==', studentId),
@@ -209,7 +209,9 @@ export const subscribeToSubmissions = (studentId: string, callback: (docs: Query
   return onSnapshot(q, callback);
 };
 
-export const subscribeToPendingSubmissions = (callback: (docs: QuerySnapshot<DocumentData>) => void) => {
+export const subscribeToPendingSubmissions = (
+  callback: (docs: QuerySnapshot<DocumentData>) => void
+) => {
   const q = query(
     collection(db, 'student_submissions'),
     where('status', '==', 'submitted'),
@@ -226,12 +228,17 @@ export const toDate = (ts: Timestamp | Date | undefined): Date => {
 
 export const fmtTimestamp = (ts: Timestamp | Date | undefined): string => {
   const d = toDate(ts);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 export {
   collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
   query, where, orderBy, Timestamp, serverTimestamp, addDoc,
   onSnapshot, writeBatch, increment,
-  ref, uploadBytes, getDownloadURL,
 };
