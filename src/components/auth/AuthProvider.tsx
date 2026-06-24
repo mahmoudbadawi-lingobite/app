@@ -4,7 +4,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
-  auth,
   signInWithGoogle,
   logoutUser,
   createUserProfile,
