@@ -220,9 +220,12 @@ export const subscribeToPendingSubmissions = (
 };
 
 // --- Timestamp Helpers ---
-export const toDate = (ts: Timestamp | Date | undefined): Date => {
+export const toDate = (ts: Timestamp | Date | undefined | null | unknown): Date => {
   if (!ts) return new Date();
-  return ts instanceof Date ? ts : ts.toDate();
+  if (ts instanceof Date) return ts;
+  if (typeof (ts as any).toDate === 'function') return (ts as any).toDate();
+  if (typeof (ts as any).seconds === 'number') return new Date((ts as any).seconds * 1000);
+  return new Date(ts as any);
 };
 
 export const fmtTimestamp = (ts: Timestamp | Date | undefined): string => {
