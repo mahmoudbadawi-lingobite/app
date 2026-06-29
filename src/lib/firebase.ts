@@ -151,8 +151,7 @@ export const getStudentSubmissions = async (studentId: string) => {
 export const getPendingSubmissions = async () => {
   const q = query(
     collection(db, 'student_submissions'),
-    where('status', '==', 'submitted'),
-    orderBy('submittedAt', 'desc')
+    orderBy('createdAt', 'desc')
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
