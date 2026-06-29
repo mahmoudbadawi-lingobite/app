@@ -17,7 +17,7 @@ import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
   Sparkles, TrendingUp, Users, Zap, Loader2
 } from 'lucide-react';
-import { getLessons, getStudentSubmissions } from '@/lib/firebase';
+import { getLessons, getStudentSubmissions, createSubmission } from '@/lib/firebase';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
@@ -73,11 +73,29 @@ const AppContent: React.FC = () => {
   };
 
   const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
-    console.log('Lesson completed:', submission);
-    // Refresh submissions after completion
-    if (user) {
+    if (!user || !activeLesson) return;
+    try {
+      await createSubmission({
+        ...submission,
+        studentId: user.uid,
+        studentName: user.displayName || 'Anonymous',
+        studentPhotoURL: user.photoURL || '',
+        lessonId: activeLesson.id,
+        lessonTitle: activeLesson.title,
+        lessonType: activeLesson.type,
+        status: 'submitted',
+        startedAt: submission.startedAt || new Date(),
+        submittedAt: new Date(),
+        maxScore: activeLesson.items?.length * 10 || 100,
+        competenceFlags: [],
+        flawFlags: [],
+        emailSent: false,
+      });
+      // Refresh submissions
       const data = await getStudentSubmissions(user.uid);
       setSubmissions(data as StudentSubmission[]);
+    } catch (err) {
+      console.error('Failed to save submission:', err);
     }
     setCurrentView('home');
     setActiveLesson(null);
