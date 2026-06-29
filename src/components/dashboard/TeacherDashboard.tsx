@@ -1,26 +1,40 @@
 // ============================================================
-// LingoBite - Teacher Dashboard
-// Full review interface for all pending submissions
+// LingoBite - Teacher Dashboard (Firestore-powered)
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import TeacherGradeCard from './TeacherGradeCard';
 import {
   Inbox, CheckCircle, Clock, Search,
-  Users, TrendingUp, GraduationCap
+  Users, TrendingUp, GraduationCap, Loader2
 } from 'lucide-react';
 import type { StudentSubmission } from '@/types';
-import { MOCK_SUBMISSIONS } from '@/lib/mockData';
-import { fmtTimestamp } from '@/lib/firebase';
+import { getPendingSubmissions, updateSubmission, fmtTimestamp } from '@/lib/firebase';
 
 const TeacherDashboard: React.FC = () => {
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>(MOCK_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'graded'>('all');
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
+
+  // Load all submissions from Firestore
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        const data = await getPendingSubmissions();
+        setSubmissions(data as StudentSubmission[]);
+      } catch (err) {
+        console.error('Failed to load submissions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubmissions();
+  }, []);
 
   const filteredSubmissions = submissions.filter(sub => {
     if (filter === 'pending') return sub.status === 'submitted';
@@ -28,35 +42,45 @@ const TeacherDashboard: React.FC = () => {
     return true;
   }).filter(sub =>
     search === '' ||
-    sub.studentName.toLowerCase().includes(search.toLowerCase()) ||
-    sub.lessonTitle.toLowerCase().includes(search.toLowerCase())
+    sub.studentName?.toLowerCase().includes(search.toLowerCase()) ||
+    sub.lessonTitle?.toLowerCase().includes(search.toLowerCase())
   );
 
   const pendingCount = submissions.filter(s => s.status === 'submitted').length;
   const gradedCount = submissions.filter(s => s.status === 'graded').length;
 
-  const handleGrade = (submissionId: string, data: {
+  const handleGrade = async (submissionId: string, data: {
     totalScore: number;
     teacherWrittenFeedback: string;
     teacherAudioFeedbackUrl?: string;
     competenceFlags: string[];
     flawFlags: string[];
   }) => {
-    setSubmissions(prev =>
-      prev.map(sub =>
-        sub.id === submissionId
-          ? { ...sub, ...data, status: 'graded' as const, gradedAt: new Date() }
-          : sub
-      )
-    );
-    setSelectedSubmission(null);
+    try {
+      await updateSubmission(submissionId, {
+        ...data,
+        status: 'graded',
+        gradedAt: new Date(),
+      });
+      // Update local state
+      setSubmissions(prev =>
+        prev.map(sub =>
+          sub.id === submissionId
+            ? { ...sub, ...data, status: 'graded' as const, gradedAt: new Date() }
+            : sub
+        )
+      );
+      setSelectedSubmission(null);
+    } catch (err) {
+      console.error('Failed to save grade:', err);
+    }
   };
 
   const stats = [
     { label: 'Pending Review', value: pendingCount, icon: Inbox, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Graded', value: gradedCount, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Total Students', value: 24, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Avg. Score', value: '78%', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Total Submissions', value: submissions.length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Completion Rate', value: submissions.length > 0 ? `${Math.round((gradedCount / submissions.length) * 100)}%` : '0%', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   return (
@@ -93,12 +117,8 @@ const TeacherDashboard: React.FC = () => {
         </div>
 
         {selectedSubmission ? (
-          /* Single Submission Review */
           <div className="space-y-6">
-            <button
-              onClick={() => setSelectedSubmission(null)}
-              className="lb-btn-outline flex items-center gap-2"
-            >
+            <button onClick={() => setSelectedSubmission(null)} className="lb-btn-outline flex items-center gap-2">
               ← Back to List
             </button>
             <TeacherGradeCard
@@ -107,7 +127,6 @@ const TeacherDashboard: React.FC = () => {
             />
           </div>
         ) : (
-          /* Submissions List */
           <div>
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -137,66 +156,67 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Submissions Grid */}
-            <div className="grid gap-4">
-              {filteredSubmissions.map(sub => (
-                <Card
-                  key={sub.id}
-                  onClick={() => setSelectedSubmission(sub)}
-                  className="lb-card p-5 cursor-pointer hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={sub.studentPhotoURL || 'https://via.placeholder.com/40'}
-                        alt={sub.studentName}
-                        className="w-11 h-11 rounded-full border-2 border-[#c9993f]/20 object-cover"
-                      />
-                      <div>
-                        <h3 className="font-semibold text-[#0d1b2a]">{sub.studentName}</h3>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {sub.lessonType}
-                          </Badge>
-                          <span className="text-xs text-[#0d1b2a]/40">{sub.lessonTitle}</span>
+            {/* Submissions */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading submissions...</span>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {filteredSubmissions.map(sub => (
+                  <Card
+                    key={sub.id}
+                    onClick={() => setSelectedSubmission(sub)}
+                    className="lb-card p-5 cursor-pointer hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={sub.studentPhotoURL || 'https://via.placeholder.com/40'}
+                          alt={sub.studentName}
+                          className="w-11 h-11 rounded-full border-2 border-[#c9993f]/20 object-cover"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-[#0d1b2a]">{sub.studentName}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {sub.lessonType}
+                            </Badge>
+                            <span className="text-xs text-[#0d1b2a]/40">{sub.lessonTitle}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge
-                        className={
-                          sub.status === 'graded'
-                            ? 'lb-badge-reviewed'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }
-                      >
-                        {sub.status === 'graded' ? (
-                          <><CheckCircle className="w-3 h-3 mr-1" /> Graded</>
-                        ) : (
-                          <><Clock className="w-3 h-3 mr-1" /> Pending</>
+                      <div className="text-right">
+                        <Badge className={sub.status === 'graded' ? 'lb-badge-reviewed' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+                          {sub.status === 'graded' ? (
+                            <><CheckCircle className="w-3 h-3 mr-1" /> Graded</>
+                          ) : (
+                            <><Clock className="w-3 h-3 mr-1" /> Pending</>
+                          )}
+                        </Badge>
+                        {sub.totalScore !== undefined && (
+                          <p className="text-sm text-[#c9993f] font-bold mt-1">
+                            {sub.totalScore} / {sub.maxScore}
+                          </p>
                         )}
-                      </Badge>
-                      {sub.totalScore !== undefined && (
-                        <p className="text-sm text-[#c9993f] font-bold mt-1">
-                          {sub.totalScore} / {sub.maxScore}
-                        </p>
-                      )}
-                      {sub.submittedAt && (
-                        <p className="text-xs text-[#0d1b2a]/40 mt-0.5">
-                          {fmtTimestamp(sub.submittedAt)}
-                        </p>
-                      )}
+                        {sub.submittedAt && (
+                          <p className="text-xs text-[#0d1b2a]/40 mt-0.5">
+                            {fmtTimestamp(sub.submittedAt)}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                  </Card>
+                ))}
+                {filteredSubmissions.length === 0 && (
+                  <div className="text-center py-12">
+                    <Inbox className="w-12 h-12 text-[#0d1b2a]/20 mx-auto mb-3" />
+                    <p className="text-[#0d1b2a]/40 font-medium">No submissions found</p>
                   </div>
-                </Card>
-              ))}
-              {filteredSubmissions.length === 0 && (
-                <div className="text-center py-12">
-                  <Inbox className="w-12 h-12 text-[#0d1b2a]/20 mx-auto mb-3" />
-                  <p className="text-[#0d1b2a]/40 font-medium">No submissions found</p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
