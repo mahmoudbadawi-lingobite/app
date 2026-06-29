@@ -5,7 +5,7 @@
 // ============================================================
 
 import { db } from '@/lib/firebase';
-import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import {
   PRONUNCIATION_LESSONS,
   VOCABULARY_LESSONS,
