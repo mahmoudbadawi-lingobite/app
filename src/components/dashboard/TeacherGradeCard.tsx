@@ -144,7 +144,11 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
               <p className="text-xs text-[#0d1b2a]/50 mb-1">Duration</p>
               <p className="text-sm font-bold text-[#0d1b2a]">
                 {submission.submittedAt && submission.startedAt
-                  ? Math.round((submission.submittedAt.getTime() - submission.startedAt.getTime()) / 60000)
+                  ? Math.round((
+                      (submission.submittedAt as any)?.toDate?.()?.getTime?.() ?? new Date(submission.submittedAt as any).getTime()
+                    - (
+                      (submission.startedAt as any)?.toDate?.()?.getTime?.() ?? new Date(submission.startedAt as any).getTime()
+                    )) / 60000)
                   : 0}m
               </p>
             </div>
