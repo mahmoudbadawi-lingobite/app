@@ -122,8 +122,15 @@ export const updateSubmission = async (
   submissionId: string,
   data: Partial<DocumentData>
 ) => {
+  // Firestore rejects `undefined` field values — strip them out
+  const cleanData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleanData[key] = value;
+    }
+  }
   await updateDoc(doc(db, 'student_submissions', submissionId), {
-    ...data,
+    ...cleanData,
     updatedAt: serverTimestamp(),
   });
 };
