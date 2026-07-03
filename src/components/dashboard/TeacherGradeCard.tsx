@@ -69,9 +69,22 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
     });
   };
 
-  const handleSendEmail = () => {
-    // In production: trigger Firebase Cloud Function to send email
-    setEmailSent(true);
+  const handleSendEmail = async () => {
+    try {
+      const { sendFeedbackEmail } = await import("@/lib/emailjs");
+      await sendFeedbackEmail({
+        student_name: submission.studentName || "Student",
+        student_email: submission.studentEmail || "",
+        lesson_title: submission.lessonTitle || "",
+        score: submission.totalScore || 0,
+        max_score: submission.maxScore || 100,
+        feedback: submission.teacherWrittenFeedback || "",
+      });
+      setEmailSent(true);
+    } catch (err) {
+      console.error("Failed to send email:", err);
+      alert("Failed to send email. Check the console for details.");
+    }
   };
 
   const statusColors = {
