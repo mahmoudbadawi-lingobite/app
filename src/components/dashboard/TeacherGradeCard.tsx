@@ -60,11 +60,21 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
     }
   };
 
-  const handleSubmitGrade = () => {
+  const handleSubmitGrade = async () => {
+    let audioUrl: string | undefined = undefined;
+    if (audioRecorder.audioBlob) {
+      try {
+        const { uploadAudioRecording } = await import('@/lib/cloudinary');
+        const filename = `teacher_feedback_${submission.id}_${Date.now()}.webm`;
+        audioUrl = await uploadAudioRecording(audioRecorder.audioBlob, filename);
+      } catch (err) {
+        console.error('Failed to upload audio feedback:', err);
+      }
+    }
     onGrade({
       totalScore: parseInt(score) || 0,
       teacherWrittenFeedback: writtenFeedback,
-      teacherAudioFeedbackUrl: audioRecorder.audioUrl || undefined,
+      teacherAudioFeedbackUrl: audioUrl,
       competenceFlags,
       flawFlags,
     });
@@ -322,14 +332,20 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
                     <RotateCcw className="w-3.5 h-3.5" /> Re-record
                   </button>
                 </div>
+              ) : submission.teacherAudioFeedbackUrl && isGraded ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-[#0d1b2a]/50 mb-1">Recorded audio feedback:</p>
+                  <audio src={submission.teacherAudioFeedbackUrl} controls className="w-full rounded-xl" />
+                </div>
               ) : (
                 <div className="flex items-center justify-center py-4">
                   <button
                     onClick={() => audioRecorder.startRecording()}
-                    className="flex items-center gap-2 text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors"
+                    disabled={isGraded}
+                    className="flex items-center gap-2 text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Mic className="w-5 h-5" />
-                    Record Audio Feedback
+                    {isGraded ? 'No audio feedback recorded' : 'Record Audio Feedback'}
                   </button>
                 </div>
               )}
