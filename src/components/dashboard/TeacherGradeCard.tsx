@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { StudentSubmission } from '@/types';
 import { fmtTimestamp } from '@/lib/firebase';
+import { sendFeedbackEmail } from '@/lib/emailjs';
 
 interface Props {
   submission: StudentSubmission;
@@ -71,7 +72,6 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
 
   const handleSendEmail = async () => {
     try {
-      const { sendFeedbackEmail } = await import("@/lib/emailjs");
       await sendFeedbackEmail({
         student_name: submission.studentName || "Student",
         student_email: submission.studentEmail || "",
