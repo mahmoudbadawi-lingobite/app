@@ -124,6 +124,7 @@ export interface StudentSubmission {
   id: string;
   studentId: string;
   studentName: string;
+  studentEmail?: string;
   studentPhotoURL?: string;
   lessonId: string;
   lessonTitle: string;
