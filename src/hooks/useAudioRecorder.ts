@@ -46,7 +46,7 @@ const fixWebMDuration = async (blob: Blob): Promise<{ blob: Blob; url: string }>
     // Attempt to get duration via AudioContext
     return new Promise((resolve) => {
       const audioCtx = new AudioContext();
-      audioCtx.decodeAudioData(arrayBuffer.slice(0), (decoded) => {
+      audioCtx.decodeAudioData(arrayBuffer.slice(0), (_decoded) => {
         audioCtx.close();
         // Re-create blob with same data — duration now accessible via decoded
         const finalBlob = new Blob([fixedBlob], { type: blob.type });
