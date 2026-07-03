@@ -79,6 +79,7 @@ const AppContent: React.FC = () => {
         ...submission,
         studentId: user.uid,
         studentName: user.displayName || 'Anonymous',
+        studentEmail: user.email || '',
         studentPhotoURL: user.photoURL || '',
         lessonId: activeLesson.id,
         lessonTitle: activeLesson.title,
