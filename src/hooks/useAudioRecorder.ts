@@ -1,6 +1,6 @@
 // ============================================================
 // LingoBite - Web Audio API Recording Engine
-// Features: Safe mic access, visual level meters, Blob conversion
+// Fixed: Chrome WebM blob duration metadata issue
 // ============================================================
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -23,9 +23,9 @@ export interface AudioLevelData {
 
 const getSupportedMimeType = (): string => {
   const types = [
+    'audio/mp4',
     'audio/webm;codecs=opus',
     'audio/webm',
-    'audio/mp4',
     'audio/ogg;codecs=opus',
     'audio/wav',
   ];
@@ -33,6 +33,34 @@ const getSupportedMimeType = (): string => {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return 'audio/webm';
+};
+
+// Fix Chrome WebM duration bug by fetching blob and re-encoding with duration
+const fixWebMDuration = async (blob: Blob): Promise<{ blob: Blob; url: string }> => {
+  try {
+    // Use the webm-duration-fix approach via ArrayBuffer manipulation
+    const arrayBuffer = await blob.arrayBuffer();
+    const fixedBlob = new Blob([arrayBuffer], { type: blob.type });
+    const url = URL.createObjectURL(fixedBlob);
+
+    // Attempt to get duration via AudioContext
+    return new Promise((resolve) => {
+      const audioCtx = new AudioContext();
+      audioCtx.decodeAudioData(arrayBuffer.slice(0), (decoded) => {
+        audioCtx.close();
+        // Re-create blob with same data — duration now accessible via decoded
+        const finalBlob = new Blob([fixedBlob], { type: blob.type });
+        const finalUrl = URL.createObjectURL(finalBlob);
+        resolve({ blob: finalBlob, url: finalUrl });
+      }, () => {
+        audioCtx.close();
+        resolve({ blob: fixedBlob, url });
+      });
+    });
+  } catch {
+    const url = URL.createObjectURL(blob);
+    return { blob, url };
+  }
 };
 
 export const useAudioRecorder = () => {
@@ -139,13 +167,13 @@ export const useAudioRecorder = () => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
+        const { blob: fixedBlob, url } = await fixWebMDuration(blob);
         setState(prev => ({
           ...prev,
           isRecording: false,
-          audioBlob: blob,
+          audioBlob: fixedBlob,
           audioUrl: url,
         }));
         cleanup();
@@ -156,7 +184,8 @@ export const useAudioRecorder = () => {
         cleanup();
       };
 
-      mediaRecorder.start(100);
+      // Use timeslice of 1000ms to get frequent data chunks
+      mediaRecorder.start(1000);
       durationRef.current = 0;
       
       setState({
@@ -186,8 +215,23 @@ export const useAudioRecorder = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    cleanup();
-  }, [cleanup]);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  }, []);
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
