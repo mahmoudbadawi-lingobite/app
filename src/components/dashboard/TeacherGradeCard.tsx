@@ -80,15 +80,20 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
     });
   };
 
+  const handleSubmitAndEmail = async () => {
+    await handleSubmitGrade();
+    await handleSendEmail();
+  };
+
   const handleSendEmail = async () => {
     try {
       await sendFeedbackEmail({
         student_name: submission.studentName || "Student",
         student_email: submission.studentEmail || "",
         lesson_title: submission.lessonTitle || "",
-        score: submission.totalScore || 0,
+        score: parseInt(score) || submission.totalScore || 0,
         max_score: submission.maxScore || 100,
-        feedback: submission.teacherWrittenFeedback || "",
+        feedback: writtenFeedback || submission.teacherWrittenFeedback || "",
       });
       setEmailSent(true);
     } catch (err) {
@@ -360,7 +365,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
                   <CheckCircle className="w-4 h-4" /> Submit Grade
                 </button>
                 <button
-                  onClick={handleSubmitGrade}
+                  onClick={handleSubmitAndEmail}
                   className="lb-btn-gold flex-1 flex items-center justify-center gap-2"
                 >
                   <CheckCircle className="w-4 h-4" /> Submit & Send Email
