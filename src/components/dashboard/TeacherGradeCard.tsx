@@ -18,6 +18,7 @@ import {
 import type { StudentSubmission } from '@/types';
 import { fmtTimestamp } from '@/lib/firebase';
 import { sendFeedbackEmail } from '@/lib/emailjs';
+import SubmissionReview from './SubmissionReview';
 
 interface Props {
   submission: StudentSubmission;
@@ -189,75 +190,8 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
             </div>
           </div>
 
-          {/* Student Answers */}
-          {submission.answers && submission.answers.length > 0 && (
-            <div>
-              <label className="text-sm font-semibold text-[#0d1b2a] mb-3 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#c9993f]" /> Student Answers
-              </label>
-              <div className="space-y-3">
-                {submission.answers.map((answer, idx) => (
-                  <div key={idx} className="bg-[#faf6ef] rounded-xl p-4 border border-[#e5ddd0]">
-                    <p className="text-xs text-[#0d1b2a]/40 mb-2">
-                      Question {idx + 1} — <span className="capitalize">{answer.itemType.replace(/_/g, ' ')}</span>
-                    </p>
-                    {answer.itemType === 'grammar_mcq' || answer.itemType === 'vocab_mcq' ? (
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium px-3 py-1 rounded-lg ${
-                          (answer as any).isCorrect
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-red-50 text-red-600 border border-red-200'
-                        }`}>
-                          Option {((answer as any).selectedOptionIndex ?? 0) + 1}
-                        </span>
-                        <span className="text-xs text-[#0d1b2a]/50">
-                          {(answer as any).isCorrect ? '✅ Correct' : '❌ Incorrect'}
-                        </span>
-                      </div>
-                    ) : answer.itemType === 'vocab_fillin' ? (
-                      <div className="space-y-1">
-                        {(answer as any).answers?.map((ans: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className={`text-sm px-3 py-1 rounded-lg border ${
-                              (answer as any).isCorrect?.[i]
-                                ? 'bg-green-50 text-green-700 border-green-200'
-                                : 'bg-red-50 text-red-600 border-red-200'
-                            }`}>
-                              Blank {i + 1}: {ans || '(empty)'}
-                            </span>
-                            <span className="text-xs text-[#0d1b2a]/50">
-                              {(answer as any).isCorrect?.[i] ? '✅' : '❌'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : answer.itemType === 'grammar_sentence' ? (
-                      <div>
-                        <p className="text-sm text-[#0d1b2a] bg-white rounded-lg p-3 border border-[#e5ddd0]">
-                          {(answer as any).sentence || '(no answer)'}
-                        </p>
-                        {(answer as any).wordsUsed?.length > 0 && (
-                          <p className="text-xs text-[#0d1b2a]/50 mt-1">
-                            Words used: {(answer as any).wordsUsed.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    ) : answer.itemType === 'pronunciation' ? (
-                      <div>
-                        {(answer as any).recordedAudioUrl ? (
-                          <audio src={(answer as any).recordedAudioUrl} controls className="w-full rounded-lg" />
-                        ) : (
-                          <p className="text-sm text-[#0d1b2a]/50">No audio recorded</p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[#0d1b2a]/50">Answer data not available</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Student Answers - Full Lesson Review */}
+          <SubmissionReview submission={submission} />
 
           {/* Score Input */}
           <div>
