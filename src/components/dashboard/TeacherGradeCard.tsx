@@ -94,6 +94,13 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         score: parseInt(score) || submission.totalScore || 0,
         max_score: submission.maxScore || 100,
         feedback: writtenFeedback || submission.teacherWrittenFeedback || "",
+        competence_flags: competenceFlags.length > 0
+          ? competenceFlags.join(', ')
+          : (submission.competenceFlags?.join(', ') || 'None specified'),
+        flaw_flags: flawFlags.length > 0
+          ? flawFlags.join(', ')
+          : (submission.flawFlags?.join(', ') || 'None specified'),
+        audio_feedback_url: audioRecorder.audioUrl || submission.teacherAudioFeedbackUrl || '',
       });
       setEmailSent(true);
     } catch (err) {
