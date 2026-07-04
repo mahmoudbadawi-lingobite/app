@@ -15,6 +15,9 @@ interface FeedbackEmailParams {
   score: number;
   max_score: number;
   feedback: string;
+  competence_flags?: string;
+  flaw_flags?: string;
+  audio_feedback_url?: string;
 }
 
 export const sendFeedbackEmail = async (params: FeedbackEmailParams): Promise<void> => {
@@ -28,6 +31,9 @@ export const sendFeedbackEmail = async (params: FeedbackEmailParams): Promise<vo
       score: String(params.score),
       max_score: String(params.max_score),
       feedback: params.feedback,
+      competence_flags: params.competence_flags || 'None specified',
+      flaw_flags: params.flaw_flags || 'None specified',
+      audio_feedback_url: params.audio_feedback_url || '',
     },
     { publicKey: PUBLIC_KEY }
   );
