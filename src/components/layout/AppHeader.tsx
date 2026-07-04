@@ -71,14 +71,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             {user && (
               <>
-                <button
-                  onClick={() => switchRole(isTeacher ? 'student' : 'teacher')}
-                  className="lb-btn-outline py-1.5 px-3 text-xs hidden sm:flex items-center gap-1.5"
-                  title={`Switch to ${isTeacher ? 'Student' : 'Teacher'} view`}
-                >
-                  {isTeacher ? <GraduationCap className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
-                  {isTeacher ? 'Student View' : 'Teacher View'}
-                </button>
+                {user.role === 'teacher' && (
+                  <button
+                    onClick={() => switchRole(isTeacher ? 'student' : 'teacher')}
+                    className="lb-btn-outline py-1.5 px-3 text-xs hidden sm:flex items-center gap-1.5"
+                    title={`Switch to ${isTeacher ? 'Student' : 'Teacher'} view`}
+                  >
+                    {isTeacher ? <GraduationCap className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                    {isTeacher ? 'Student View' : 'Teacher View'}
+                  </button>
+                )}
                 
                 <div className="flex items-center gap-2.5 pl-2 border-l border-[#c9993f]/20">
                   <div className="hidden sm:block text-right">
