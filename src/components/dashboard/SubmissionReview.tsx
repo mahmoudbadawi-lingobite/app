@@ -36,8 +36,10 @@ const SubmissionReview: React.FC<Props> = ({ submission }) => {
     fetch();
   }, [submission.lessonId]);
 
-  const getAnswer = (itemId: string): StudentAnswer | undefined =>
-    submission.answers?.find(a => a.itemId === itemId);
+  const getAnswer = (itemId: string, order: number): StudentAnswer | undefined =>
+    submission.answers?.find(a => a.itemId === itemId) ||
+    submission.answers?.find(a => (a as any).itemOrder === order) ||
+    submission.answers?.[order];
 
   if (loading) return (
     <div className="flex items-center justify-center py-10 gap-2 text-[#0d1b2a]/40">
@@ -65,7 +67,7 @@ const SubmissionReview: React.FC<Props> = ({ submission }) => {
       </div>
 
       {(lesson.items as any[]).map((item: any, idx: number) => {
-        const answer = getAnswer(item.id);
+        const answer = getAnswer(item.id, idx);
         return (
           <Card key={item.id} className="lb-card overflow-hidden">
             {/* Question Header */}
