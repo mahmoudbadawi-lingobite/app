@@ -12,7 +12,7 @@ import AudioVisualizer from '@/components/lessons/AudioVisualizer';
 import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 import TeacherGradeCard from '@/components/dashboard/TeacherGradeCard';
 import {
-  Mic, Square, RotateCcw, Play, Pause, Volume2, Lightbulb,
+  Mic, Square, RotateCcw, Pause, Volume2, Lightbulb,
   CheckCircle, ChevronRight, ChevronLeft, Headphones, Upload
 } from 'lucide-react';
 import type { Lesson, PronunciationItem, StudentSubmission } from '@/types';
