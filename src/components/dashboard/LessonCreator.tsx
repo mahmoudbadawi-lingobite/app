@@ -37,12 +37,6 @@ const defaultItem = (type: ItemType, order: number): any => {
   }
 };
 
-const lessonTypeForItem = (type: ItemType): LessonType => {
-  if (type.startsWith('grammar')) return 'grammar';
-  if (type.startsWith('vocab')) return 'vocabulary';
-  return 'pronunciation';
-};
-
 // ---- MCQ Editor ----
 const MCQEditor: React.FC<{ item: any; onChange: (item: any) => void; onDelete: () => void }> = ({ item, onChange, onDelete }) => (
   <div className="space-y-3">
@@ -288,14 +282,14 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved }) => {
     }
   };
 
-  const itemTypes: { type: ItemType; label: string; icon: React.ReactNode }[] = lessonType === 'grammar' ? [
-    { type: 'grammar_mcq', label: 'Multiple Choice', icon: <Target className="w-4 h-4" /> },
-    { type: 'grammar_sentence', label: 'Sentence Construction', icon: <BookMarked className="w-4 h-4" /> },
+  const itemTypes: { type: ItemType; label: string }[] = lessonType === 'grammar' ? [
+    { type: 'grammar_mcq', label: 'Multiple Choice' },
+    { type: 'grammar_sentence', label: 'Sentence Construction' },
   ] : lessonType === 'vocabulary' ? [
-    { type: 'vocab_mcq', label: 'Multiple Choice', icon: <Target className="w-4 h-4" /> },
-    { type: 'vocab_fillin', label: 'Fill in the Blank', icon: <BookMarked className="w-4 h-4" /> },
+    { type: 'vocab_mcq', label: 'Multiple Choice' },
+    { type: 'vocab_fillin', label: 'Fill in the Blank' },
   ] : [
-    { type: 'pronunciation', label: 'Pronunciation', icon: <Mic className="w-4 h-4" /> },
+    { type: 'pronunciation', label: 'Pronunciation' },
   ];
 
   return (
@@ -440,7 +434,7 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved }) => {
 
           {/* Add Question Buttons */}
           <div className="flex flex-wrap gap-2">
-            {itemTypes.map(({ type, label, icon }) => (
+            {itemTypes.map(({ type, label }) => (
               <button
                 key={type}
                 onClick={() => addItem(type)}
