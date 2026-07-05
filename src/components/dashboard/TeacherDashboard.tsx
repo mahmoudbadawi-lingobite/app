@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import TeacherGradeCard from './TeacherGradeCard';
 import {
-  Inbox, CheckCircle, Clock, Search,
+  Inbox, CheckCircle, Clock, Search, Plus,
   Users, TrendingUp, GraduationCap, Loader2
 } from 'lucide-react';
 import type { StudentSubmission } from '@/types';
+import LessonCreator from './LessonCreator';
 import { getPendingSubmissions, updateSubmission, fmtTimestamp } from '@/lib/firebase';
 
 const TeacherDashboard: React.FC = () => {
@@ -20,6 +21,7 @@ const TeacherDashboard: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'graded'>('all');
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
+  const [showCreator, setShowCreator] = useState(false);
 
   // Load all submissions from Firestore
   useEffect(() => {
@@ -93,7 +95,15 @@ const TeacherDashboard: React.FC = () => {
               <GraduationCap className="w-5 h-5 text-[#c9993f]" />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">Teacher Dashboard</h1>
+              <div className="flex items-center justify-between w-full">
+            <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">Teacher Dashboard</h1>
+            <button
+              onClick={() => setShowCreator(true)}
+              className="lb-btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Create Lesson
+            </button>
+          </div>
               <p className="text-sm text-[#0d1b2a]/50">Review and grade student submissions</p>
             </div>
           </div>
@@ -116,7 +126,12 @@ const TeacherDashboard: React.FC = () => {
           ))}
         </div>
 
-        {selectedSubmission ? (
+        {showCreator ? (
+          <LessonCreator
+            onBack={() => setShowCreator(false)}
+            onSaved={() => { setShowCreator(false); window.location.reload(); }}
+          />
+        ) : selectedSubmission ? (
           <div className="space-y-6">
             <button onClick={() => setSelectedSubmission(null)} className="lb-btn-outline flex items-center gap-2">
               ← Back to List
