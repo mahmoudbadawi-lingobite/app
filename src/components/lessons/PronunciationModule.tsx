@@ -167,23 +167,18 @@ const PronunciationModule: React.FC<Props> = ({
         </div>
 
         {/* YouTube Video */}
-        <Card className="lb-card p-1 mb-6 overflow-hidden">
-          <div className="aspect-video bg-[#0d1b2a] rounded-[1rem] flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b2a] to-[#1a2d42]" />
-            <div className="relative z-10 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#c9993f] flex items-center justify-center mx-auto mb-3 cursor-pointer hover:scale-110 transition-transform">
-                <Play className="w-7 h-7 text-[#0d1b2a] ml-1" />
-              </div>
-              <p className="text-[#faf6ef]/80 text-sm font-medium">Instructional Video</p>
-              <p className="text-[#faf6ef]/40 text-xs mt-1">Click to play model pronunciation</p>
+        {lesson.youtubeUrl && (
+          <Card className="lb-card p-1 mb-6 overflow-hidden">
+            <div className="aspect-video rounded-[1rem] overflow-hidden">
+              <iframe
+                src={lesson.youtubeUrl.includes('embed') ? lesson.youtubeUrl : lesson.youtubeUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                className="w-full h-full"
+                allowFullScreen
+                title="Lesson video"
+              />
             </div>
-            <img
-              src={`https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1200&h=675&fit=crop`}
-              alt="Pronunciation lesson"
-              className="absolute inset-0 w-full h-full object-cover opacity-30"
-            />
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Main Practice Card */}
         <Card className="lb-card p-6 sm:p-8 mb-6">
