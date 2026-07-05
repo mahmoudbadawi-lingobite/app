@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
   CheckCircle, XCircle, ChevronRight, ChevronLeft, Upload,
-  Lightbulb, HelpCircle, Sparkles, Zap, RotateCcw, Wand2
+  Lightbulb, HelpCircle, Sparkles, RotateCcw, Wand2
 } from 'lucide-react';
 import type {
   Lesson, GrammarMCQItem, GrammarSentenceItem, StudentSubmission
