@@ -64,31 +64,39 @@ const PronunciationModule: React.FC<Props> = ({
   const handleRecordToggle = async () => {
     if (recorder.isRecording) {
       recorder.stopRecording();
-      // Wait a tick for the blob to be ready
-      setTimeout(async () => {
-        if (recorder.audioBlob) {
-          let audioUrl = recorder.audioUrl || '#';
-          try {
-            const { uploadAudioRecording } = await import('@/lib/cloudinary');
-            const filename = `student_pronunciation_${currentItem.id}_${Date.now()}.webm`;
-            audioUrl = await uploadAudioRecording(recorder.audioBlob, filename);
-          } catch (err) {
-            console.error('Failed to upload pronunciation audio:', err);
-          }
-          setCompletedItems(prev => new Set(prev).add(currentIndex));
-          const newAnswer = {
-            itemId: currentItem.id,
-            itemType: 'pronunciation' as const,
-            itemOrder: currentItem.order,
-            recordedAudioUrl: audioUrl,
-            durationSeconds: recorder.duration,
+      // audioBlob is set async after onstop fires — poll for it
+      const waitForBlob = (retries = 20): Promise<Blob | null> =>
+        new Promise(resolve => {
+          const check = (n: number) => {
+            if (recorder.audioBlob) return resolve(recorder.audioBlob);
+            if (n <= 0) return resolve(null);
+            setTimeout(() => check(n - 1), 200);
           };
-          setSubmission(prev => ({
-            ...prev,
-            answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), newAnswer],
-          }));
+          check(retries);
+        });
+      const blob = await waitForBlob();
+      if (blob) {
+        let audioUrl = recorder.audioUrl || '#';
+        try {
+          const { uploadAudioRecording } = await import('@/lib/cloudinary');
+          const filename = `student_pronunciation_${currentItem.id}_${Date.now()}.webm`;
+          audioUrl = await uploadAudioRecording(blob, filename);
+        } catch (err) {
+          console.error('Failed to upload pronunciation audio:', err);
         }
-      }, 500);
+        setCompletedItems(prev => new Set(prev).add(currentIndex));
+        const newAnswer = {
+          itemId: currentItem.id,
+          itemType: 'pronunciation' as const,
+          itemOrder: currentItem.order,
+          recordedAudioUrl: audioUrl,
+          durationSeconds: recorder.duration,
+        };
+        setSubmission(prev => ({
+          ...prev,
+          answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), newAnswer],
+        }));
+      }
     } else {
       await recorder.startRecording();
     }
