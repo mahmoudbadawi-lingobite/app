@@ -54,8 +54,6 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
   });
 
   const currentItem = items[currentIndex];
-  const progress = Math.round((currentIndex / items.length) * 100);
-  React.useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
   const isLastItem = currentIndex === items.length - 1;
 
   const handleFillInAnswer = (itemId: string, blankIdx: number, value: string) => {
@@ -180,7 +178,7 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
   };
 
   const progress = Math.round(((currentIndex + (showResult[currentItem.id] ? 1 : 0)) / items.length) * 100);
-  void progress;
+  React.useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
 
   return (
     <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
