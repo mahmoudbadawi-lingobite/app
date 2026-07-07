@@ -69,6 +69,7 @@ export const createUserProfile = async (
       displayName: user.displayName || 'Anonymous',
       photoURL: user.photoURL,
       role,
+      customAvatarUrl: null,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
       badges: [],
@@ -86,7 +87,10 @@ export const getUserProfile = async (uid: string) => {
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? (snap.data() as DocumentData) : null;
 };
-
+export const updateUserAvatar = async (uid: string, avatarUrl: string) => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, { customAvatarUrl: avatarUrl });
+};
 export const getLessons = async (type?: string) => {
   let q = query(
     collection(db, 'lessons'),
