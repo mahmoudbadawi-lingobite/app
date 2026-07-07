@@ -1,6 +1,5 @@
 // ============================================================
-// LingoBite - Web Audio API Recording Engine
-// Fixed: Chrome WebM blob duration metadata issue
+// LingoBite - Web Audio API Recording Engine (Fixed)
 // ============================================================
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -27,40 +26,11 @@ const getSupportedMimeType = (): string => {
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/ogg;codecs=opus',
-    'audio/wav',
   ];
   for (const type of types) {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return 'audio/webm';
-};
-
-// Fix Chrome WebM duration bug by fetching blob and re-encoding with duration
-const fixWebMDuration = async (blob: Blob): Promise<{ blob: Blob; url: string }> => {
-  try {
-    // Use the webm-duration-fix approach via ArrayBuffer manipulation
-    const arrayBuffer = await blob.arrayBuffer();
-    const fixedBlob = new Blob([arrayBuffer], { type: blob.type });
-    const url = URL.createObjectURL(fixedBlob);
-
-    // Attempt to get duration via AudioContext
-    return new Promise((resolve) => {
-      const audioCtx = new AudioContext();
-      audioCtx.decodeAudioData(arrayBuffer.slice(0), (_decoded) => {
-        audioCtx.close();
-        // Re-create blob with same data — duration now accessible via decoded
-        const finalBlob = new Blob([fixedBlob], { type: blob.type });
-        const finalUrl = URL.createObjectURL(finalBlob);
-        resolve({ blob: finalBlob, url: finalUrl });
-      }, () => {
-        audioCtx.close();
-        resolve({ blob: fixedBlob, url });
-      });
-    });
-  } catch {
-    const url = URL.createObjectURL(blob);
-    return { blob, url };
-  }
 };
 
 export const useAudioRecorder = () => {
@@ -88,28 +58,24 @@ export const useAudioRecorder = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rafRef = useRef<number | null>(null);
   const durationRef = useRef(0);
+  const onStopCallbackRef = useRef<((blob: Blob, url: string) => void) | null>(null);
 
-  const cleanup = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
+  const stopStream = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
-    mediaRecorderRef.current = null;
     analyserRef.current = null;
-    chunksRef.current = [];
   }, []);
+
+  const cleanup = useCallback(() => {
+    stopStream();
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+  }, [stopStream]);
 
   useEffect(() => cleanup, [cleanup]);
 
@@ -117,35 +83,24 @@ export const useAudioRecorder = () => {
     if (!analyserRef.current) return;
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
-    
-    let sum = 0;
-    let peak = 0;
+    let sum = 0, peak = 0;
     for (let i = 0; i < dataArray.length; i++) {
       const val = dataArray[i] / 255;
       sum += val;
       if (val > peak) peak = val;
     }
     const avg = sum / dataArray.length;
-
-    setLevelData(prev => {
-      const newLevels = [...prev.levels.slice(1), avg];
-      return { average: avg, peak, levels: newLevels };
-    });
-
+    setLevelData(prev => ({ average: avg, peak, levels: [...prev.levels.slice(1), avg] }));
     rafRef.current = requestAnimationFrame(updateLevels);
   }, []);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (onStop?: (blob: Blob, url: string) => void) => {
     try {
       cleanup();
-      
+      onStopCallbackRef.current = onStop || null;
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100,
-          channelCount: 1,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100, channelCount: 1 },
       });
       streamRef.current = stream;
 
@@ -167,35 +122,32 @@ export const useAudioRecorder = () => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
+        // Blob is built BEFORE cleanup so chunks are still available
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const { blob: fixedBlob, url } = await fixWebMDuration(blob);
-        setState(prev => ({
-          ...prev,
-          isRecording: false,
-          audioBlob: fixedBlob,
-          audioUrl: url,
-        }));
-        cleanup();
+        const url = URL.createObjectURL(blob);
+        setState(prev => ({ ...prev, isRecording: false, audioBlob: blob, audioUrl: url }));
+        // Fire callback with blob
+        if (onStopCallbackRef.current) {
+          onStopCallbackRef.current(blob, url);
+          onStopCallbackRef.current = null;
+        }
+        // Cleanup stream resources only (not chunks yet)
+        stopStream();
+        mediaRecorderRef.current = null;
       };
 
       mediaRecorder.onerror = () => {
-        setState(prev => ({ ...prev, error: 'Recording error occurred', isRecording: false }));
+        setState(prev => ({ ...prev, error: 'Recording error', isRecording: false }));
         cleanup();
       };
 
-      // Use timeslice of 1000ms to get frequent data chunks
-      mediaRecorder.start(1000);
+      mediaRecorder.start(100);
       durationRef.current = 0;
-      
+
       setState({
-        isRecording: true,
-        isPaused: false,
-        duration: 0,
-        audioBlob: null,
-        audioUrl: null,
-        error: null,
-        mimeType,
+        isRecording: true, isPaused: false, duration: 0,
+        audioBlob: null, audioUrl: null, error: null, mimeType,
       });
 
       timerRef.current = setInterval(() => {
@@ -204,37 +156,23 @@ export const useAudioRecorder = () => {
       }, 1000);
 
       rafRef.current = requestAnimationFrame(updateLevels);
-
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Microphone access denied';
-      setState(prev => ({ ...prev, error: msg }));
+      setState(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Mic access denied' }));
     }
-  }, [cleanup, updateLevels]);
+  }, [cleanup, stopStream, updateLevels]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      // Stop timer and visualizer but NOT chunks — onstop needs them
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       mediaRecorderRef.current.stop();
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+      // Stream is stopped in onstop handler
     }
   }, []);
 
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.pause();
       setState(prev => ({ ...prev, isPaused: true }));
       if (timerRef.current) clearInterval(timerRef.current);
@@ -243,7 +181,7 @@ export const useAudioRecorder = () => {
   }, []);
 
   const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+    if (mediaRecorderRef.current?.state === 'paused') {
       mediaRecorderRef.current.resume();
       setState(prev => ({ ...prev, isPaused: false }));
       timerRef.current = setInterval(() => {
@@ -256,15 +194,7 @@ export const useAudioRecorder = () => {
 
   const resetRecording = useCallback(() => {
     cleanup();
-    setState({
-      isRecording: false,
-      isPaused: false,
-      duration: 0,
-      audioBlob: null,
-      audioUrl: null,
-      error: null,
-      mimeType: getSupportedMimeType(),
-    });
+    setState({ isRecording: false, isPaused: false, duration: 0, audioBlob: null, audioUrl: null, error: null, mimeType: getSupportedMimeType() });
     setLevelData({ average: 0, peak: 0, levels: new Array(60).fill(0) });
   }, [cleanup]);
 
@@ -275,14 +205,9 @@ export const useAudioRecorder = () => {
   };
 
   return {
-    ...state,
-    levelData,
-    startRecording,
-    stopRecording,
-    pauseRecording,
-    resumeRecording,
-    resetRecording,
-    formatDuration,
+    ...state, levelData,
+    startRecording, stopRecording, pauseRecording,
+    resumeRecording, resetRecording, formatDuration,
   };
 };
 
