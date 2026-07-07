@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-// Teachers can switch to student view and back (role stored in Firestore)
+  // Teachers can switch to student view and back (role stored in Firestore)
   const switchRole = async (role: UserRole) => {
     if (!user) return;
     setUser({ ...user, role });
@@ -135,6 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isTeacher: user?.role === 'teacher',
         isStudent: user?.role === 'student',
         switchRole,
+        setAvatar,
+        openAvatarPicker,
       }}
     >
       {loading ? (
@@ -173,7 +175,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           </div>
         </div>
       ) : (
-        children
+        <>
+          {children}
+          {showAvatarPicker && (
+            <AvatarPicker
+              open={showAvatarPicker}
+              dismissable={!needsInitialAvatar}
+              currentAvatarUrl={user?.customAvatarUrl}
+              onOpenChange={(open) => { if (!needsInitialAvatar) setAvatarPickerOpen(open); }}
+              onSelect={setAvatar}
+            />
+          )}
+        </>
       )}
     </AuthContext.Provider>
   );
