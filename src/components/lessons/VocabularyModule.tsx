@@ -54,6 +54,8 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
   });
 
   const currentItem = items[currentIndex];
+  const progress = Math.round((currentIndex / items.length) * 100);
+  React.useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
   const isLastItem = currentIndex === items.length - 1;
 
   const handleFillInAnswer = (itemId: string, blankIdx: number, value: string) => {
