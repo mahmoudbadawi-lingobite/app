@@ -11,6 +11,7 @@ import VocabularyModule from '@/components/lessons/VocabularyModule';
 import GrammarModule from '@/components/lessons/GrammarModule';
 import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
+import { createSubmission } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
