@@ -390,7 +390,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
                   <CheckCircle className="w-4 h-4" /> Graded on {fmtTimestamp(submission.gradedAt)}
                 </div>
                 <button
-                  onClick={handleSendEmail}
+                  onClick={() => handleSendEmail()}
                   disabled={emailSent}
                   className={`lb-btn-${emailSent ? 'outline' : 'gold'} flex items-center gap-2`}
                 >
