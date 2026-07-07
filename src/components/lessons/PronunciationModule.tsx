@@ -43,6 +43,7 @@ const PronunciationModule: React.FC<Props> = ({
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
     studentName: user?.displayName || '',
+    studentPhotoURL: user?.customAvatarUrl || user?.photoURL || undefined,
     lessonId: lesson.id,
     lessonTitle: lesson.title,
     lessonType: 'pronunciation',
