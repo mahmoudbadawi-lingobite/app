@@ -1,8 +1,8 @@
 // ============================================================
-// LingoBite - Main Application Router (Firestore-powered)
+// LingoBite - Main Application Router
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import AuthProvider, { useAuth } from '@/components/auth/AuthProvider';
 import LessonCard from '@/components/lessons/LessonCard';
@@ -15,9 +15,9 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
-  Sparkles, TrendingUp, Users, Zap, Loader2
+  Sparkles, TrendingUp, Users, Zap
 } from 'lucide-react';
-import { getLessons, getStudentSubmissions, createSubmission } from '@/lib/firebase';
+import { ALL_LESSONS, MOCK_SUBMISSIONS } from '@/lib/mockData';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
@@ -27,77 +27,21 @@ const AppContent: React.FC = () => {
   const { user, isTeacher } = useAuth();
   const [currentView, setCurrentView] = useState<View>('home');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [lessonProgress, setLessonProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  // --- Firestore state ---
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
-  const [loadingLessons, setLoadingLessons] = useState(true);
-
-  // Load lessons from Firestore on mount
-  useEffect(() => {
-    const fetchLessons = async () => {
-      try {
-        const data = await getLessons();
-        setLessons(data as Lesson[]);
-      } catch (err) {
-        console.error('Failed to load lessons:', err);
-      } finally {
-        setLoadingLessons(false);
-      }
-    };
-    fetchLessons();
-  }, []);
-
-  // Load student's own submissions
-  useEffect(() => {
-    if (!user) return;
-    const fetchSubmissions = async () => {
-      try {
-        const data = await getStudentSubmissions(user.uid);
-        setSubmissions(data as StudentSubmission[]);
-      } catch (err) {
-        console.error('Failed to load submissions:', err);
-      }
-    };
-    fetchSubmissions();
-  }, [user]);
-
-  const pronLessons = lessons.filter(l => l.type === 'pronunciation');
-  const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
-  const grammarLessons = lessons.filter(l => l.type === 'grammar');
+  const pronLessons = ALL_LESSONS.filter(l => l.type === 'pronunciation');
+  const vocabLessons = ALL_LESSONS.filter(l => l.type === 'vocabulary');
+  const grammarLessons = ALL_LESSONS.filter(l => l.type === 'grammar');
 
   const handleLessonClick = (lesson: Lesson) => {
     setActiveLesson(lesson);
+    setLessonProgress(0);
     setCurrentView('lesson');
   };
 
-  const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
-    if (!user || !activeLesson) return;
-    try {
-      await createSubmission({
-        ...submission,
-        studentId: user.uid,
-        studentName: user.displayName || 'Anonymous',
-        studentEmail: user.email || '',
-        studentPhotoURL: user.photoURL || '',
-        lessonId: activeLesson.id,
-        lessonTitle: activeLesson.title,
-        lessonType: activeLesson.type,
-        status: 'submitted',
-        startedAt: submission.startedAt || new Date(),
-        submittedAt: new Date(),
-        maxScore: activeLesson.items?.length * 10 || 100,
-        competenceFlags: [],
-        flawFlags: [],
-        emailSent: false,
-      });
-      // Refresh submissions
-      const data = await getStudentSubmissions(user.uid);
-      setSubmissions(data as StudentSubmission[]);
-    } catch (err) {
-      console.error('Failed to save submission:', err);
-    }
+  const handleLessonComplete = (submission: Partial<StudentSubmission>) => {
+    console.log('Lesson completed:', submission);
     setCurrentView('home');
     setActiveLesson(null);
   };
@@ -107,16 +51,11 @@ const AppContent: React.FC = () => {
     setActiveLesson(null);
   };
 
-  const getLessonProgress = (lessonId: string) => {
-    const sub = submissions.find(s => s.lessonId === lessonId);
-    if (sub?.status === 'graded') return 100;
-    if (sub?.status === 'submitted') return 75;
-    return 0;
-  };
-
   const renderLessonModule = () => {
     if (!activeLesson) return null;
-    const existingSubmission = submissions.find(s => s.lessonId === activeLesson.id) || null;
+    const existingSubmission = MOCK_SUBMISSIONS.find(
+      s => s.lessonId === activeLesson.id
+    ) || null;
 
     switch (activeLesson.type) {
       case 'pronunciation':
@@ -127,6 +66,7 @@ const AppContent: React.FC = () => {
             onBack={handleBackToHome}
             teacherView={isTeacher}
             existingSubmission={existingSubmission}
+            onProgress={setLessonProgress}
           />
         );
       case 'vocabulary':
@@ -136,6 +76,7 @@ const AppContent: React.FC = () => {
             onComplete={handleLessonComplete}
             onBack={handleBackToHome}
             teacherView={isTeacher}
+            onProgress={setLessonProgress}
           />
         );
       case 'grammar':
@@ -145,6 +86,7 @@ const AppContent: React.FC = () => {
             onComplete={handleLessonComplete}
             onBack={handleBackToHome}
             teacherView={isTeacher}
+            onProgress={setLessonProgress}
           />
         );
       default:
@@ -152,6 +94,14 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const getLessonProgress = (lessonId: string) => {
+    const sub = MOCK_SUBMISSIONS.find(s => s.lessonId === lessonId);
+    if (sub?.status === 'graded') return 100;
+    if (sub?.status === 'submitted') return 75;
+    return 0;
+  };
+
+  // Lesson Browser View
   const renderHome = () => (
     <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -199,10 +149,10 @@ const AppContent: React.FC = () => {
         {/* Stats Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
-            { label: 'Lessons Available', value: lessons.length, icon: BookOpen, color: 'text-[#c9993f]' },
-            { label: 'Completed', value: submissions.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
-            { label: 'Submitted', value: submissions.filter(s => s.status === 'submitted').length, icon: Users, color: 'text-[#8b5cf6]' },
-            { label: 'Current Streak', value: `${user?.currentStreak || 0} days`, icon: Zap, color: 'text-orange-500' },
+            { label: 'Lessons Available', value: ALL_LESSONS.length, icon: BookOpen, color: 'text-[#c9993f]' },
+            { label: 'Completed', value: MOCK_SUBMISSIONS.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
+            { label: 'Peer Reviews', value: 12, icon: Users, color: 'text-[#8b5cf6]' },
+            { label: 'Current Streak', value: `${user?.currentStreak || 5} days`, icon: Zap, color: 'text-orange-500' },
           ].map((stat, idx) => (
             <Card key={idx} className="lb-card p-4">
               <div className="flex items-center gap-3">
@@ -221,69 +171,94 @@ const AppContent: React.FC = () => {
         {/* Lesson Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="bg-white border border-[#e5ddd0] rounded-xl p-1 h-auto">
-            <TabsTrigger value="all" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]">
+            <TabsTrigger
+              value="all"
+              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+            >
               All Lessons
             </TabsTrigger>
-            <TabsTrigger value="pronunciation" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]">
+            <TabsTrigger
+              value="pronunciation"
+              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+            >
               <Mic className="w-3.5 h-3.5 mr-1.5" /> Pronunciation
             </TabsTrigger>
-            <TabsTrigger value="vocabulary" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]">
+            <TabsTrigger
+              value="vocabulary"
+              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+            >
               <BookMarked className="w-3.5 h-3.5 mr-1.5" /> Vocabulary
             </TabsTrigger>
-            <TabsTrigger value="grammar" className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]">
+            <TabsTrigger
+              value="grammar"
+              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+            >
               <Target className="w-3.5 h-3.5 mr-1.5" /> Grammar
             </TabsTrigger>
           </TabsList>
 
-          {loadingLessons ? (
-            <div className="flex items-center justify-center py-20 gap-3 text-[#0d1b2a]/40">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm">Loading lessons...</span>
+          <TabsContent value="all" className="mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {ALL_LESSONS.map(lesson => (
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  onClick={() => handleLessonClick(lesson)}
+                  progress={getLessonProgress(lesson.id)}
+                />
+              ))}
             </div>
-          ) : lessons.length === 0 ? (
-            <div className="text-center py-20 text-[#0d1b2a]/40">
-              <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No lessons available yet.</p>
+          </TabsContent>
+
+          <TabsContent value="pronunciation" className="mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {pronLessons.map(lesson => (
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  onClick={() => handleLessonClick(lesson)}
+                  progress={getLessonProgress(lesson.id)}
+                />
+              ))}
             </div>
-          ) : (
-            <>
-              <TabsContent value="all" className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {lessons.map(lesson => (
-                    <LessonCard key={lesson.id} lesson={lesson} onClick={() => handleLessonClick(lesson)} progress={getLessonProgress(lesson.id)} />
-                  ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="pronunciation" className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {pronLessons.map(lesson => (
-                    <LessonCard key={lesson.id} lesson={lesson} onClick={() => handleLessonClick(lesson)} progress={getLessonProgress(lesson.id)} />
-                  ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="vocabulary" className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {vocabLessons.map(lesson => (
-                    <LessonCard key={lesson.id} lesson={lesson} onClick={() => handleLessonClick(lesson)} progress={getLessonProgress(lesson.id)} />
-                  ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="grammar" className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {grammarLessons.map(lesson => (
-                    <LessonCard key={lesson.id} lesson={lesson} onClick={() => handleLessonClick(lesson)} progress={getLessonProgress(lesson.id)} />
-                  ))}
-                </div>
-              </TabsContent>
-            </>
-          )}
+          </TabsContent>
+
+          <TabsContent value="vocabulary" className="mt-6">
+            <div className="grid grid-cols-1 sm:grid-2 lg:grid-cols-3 gap-5">
+              {vocabLessons.map(lesson => (
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  onClick={() => handleLessonClick(lesson)}
+                  progress={getLessonProgress(lesson.id)}
+                />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="grammar" className="mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {grammarLessons.map(lesson => (
+                <LessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  onClick={() => handleLessonClick(lesson)}
+                  progress={getLessonProgress(lesson.id)}
+                />
+              ))}
+            </div>
+          </TabsContent>
         </Tabs>
 
-        {/* Footer */}
+        {/* Bottom CTA */}
         <div className="mt-12 text-center">
           <div className="lb-section-divider mb-8" />
-          <p className="text-sm text-[#0d1b2a]/40 mb-2">LingoBite - Interactive English Learning Platform</p>
-          <p className="text-xs text-[#0d1b2a]/30">Built with React, Firebase, Web Audio API, and Tailwind CSS</p>
+          <p className="text-sm text-[#0d1b2a]/40 mb-2">
+            LingoBite - Interactive English Learning Platform
+          </p>
+          <p className="text-xs text-[#0d1b2a]/30">
+            Built with React, Firebase, Web Audio API, and Tailwind CSS
+          </p>
         </div>
       </div>
     </div>
@@ -292,9 +267,14 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#faf6ef]">
       <AppHeader
-        currentLesson={currentView === 'lesson' && activeLesson ? { title: activeLesson.title, progress: 0 } : null}
+        currentLesson={
+          currentView === 'lesson' && activeLesson
+            ? { title: activeLesson.title, progress: lessonProgress }
+            : null
+        }
         onBack={currentView !== 'home' ? handleBackToHome : undefined}
       />
+
       {currentView === 'home' && renderHome()}
       {currentView === 'lesson' && renderLessonModule()}
       {currentView === 'teacher' && <TeacherDashboard />}
