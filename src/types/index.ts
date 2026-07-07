@@ -10,6 +10,7 @@ export interface UserProfile {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
+  customAvatarUrl?: string | null;   // Chosen from the in-app avatar picker
   createdAt: Date;
   lastLoginAt: Date;
   badges: string[];           // Array of badge IDs earned
