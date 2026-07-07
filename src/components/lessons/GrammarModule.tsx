@@ -46,6 +46,7 @@ const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
     lessonTitle: lesson.title,
     lessonType: 'grammar',
     status: 'in_progress',
+    startedAt: new Date(),
     maxScore: items.reduce((sum, item) => sum + (item.type === 'grammar_mcq' ? 10 : 15), 0),
     answers: [],
     competenceFlags: [],
