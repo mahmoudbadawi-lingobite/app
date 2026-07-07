@@ -11,7 +11,7 @@ import TeacherGradeCard from './TeacherGradeCard';
 import LessonCreator from './LessonCreator';
 import {
   Inbox, CheckCircle, Clock, Search,
-  Users, GraduationCap, Loader2,
+  Users, TrendingUp, GraduationCap, Loader2,
   Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target
 } from 'lucide-react';
 import type { StudentSubmission, Lesson } from '@/types';
@@ -38,6 +38,7 @@ const TeacherDashboard: React.FC = () => {
   const [loadingLessons, setLoadingLessons] = useState(true);
   const [showCreator, setShowCreator] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
   // Load submissions
   useEffect(() => {
@@ -152,8 +153,9 @@ const TeacherDashboard: React.FC = () => {
   if (showCreator) {
     return (
       <LessonCreator
-        onBack={() => setShowCreator(false)}
+        onBack={() => { setShowCreator(false); setEditingLesson(null); }}
         onSaved={handleLessonSaved}
+        editLesson={editingLesson || undefined}
       />
     );
   }
@@ -361,7 +363,7 @@ const TeacherDashboard: React.FC = () => {
                       </span>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setShowCreator(true)}
+                          onClick={() => { setEditingLesson(lesson); setShowCreator(true); }}
                           className="p-1.5 rounded-lg hover:bg-[#faf6ef] text-[#0d1b2a]/40 hover:text-[#0d1b2a] transition-colors"
                           title="Edit lesson"
                         >

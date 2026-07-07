@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
   Mic, BookMarked, Target, Youtube, CheckCircle,
   GripVertical, X, ArrowLeft
 } from 'lucide-react';
-import type { LessonType } from '@/types';
+import type { LessonType, Lesson } from '@/types';
 
 // ---- Item type helpers ----
 type ItemType = 'grammar_mcq' | 'grammar_sentence' | 'vocab_mcq' | 'vocab_fillin' | 'pronunciation';
@@ -220,15 +220,16 @@ const PronunciationEditor: React.FC<{ item: any; onChange: (item: any) => void; 
 interface Props {
   onBack: () => void;
   onSaved: () => void;
+  editLesson?: Lesson;
 }
 
-const LessonCreator: React.FC<Props> = ({ onBack, onSaved }) => {
+const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
   const { user } = useAuth();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [lessonType, setLessonType] = useState<LessonType>('grammar');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [items, setItems] = useState<any[]>([]);
+  const [title, setTitle] = useState(editLesson?.title || '');
+  const [description, setDescription] = useState(editLesson?.description || '');
+  const [lessonType, setLessonType] = useState<LessonType>(editLesson?.type || 'grammar');
+  const [youtubeUrl, setYoutubeUrl] = useState(editLesson?.youtubeUrl || '');
+  const [items, setItems] = useState<any[]>((editLesson?.items as any[]) || []);
   const [saving, setSaving] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -267,12 +268,16 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved }) => {
         teacherId: user?.uid || '',
         teacherName: user?.displayName || '',
         status,
-        order: Date.now(),
+        order: editLesson?.order || Date.now(),
         items: items.map((item, i) => ({ ...item, order: i })),
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        ...(editLesson ? {} : { createdAt: serverTimestamp() }),
       };
-      await addDoc(collection(db, 'lessons'), lessonData);
+      if (editLesson) {
+        await updateDoc(doc(db, 'lessons', editLesson.id), lessonData);
+      } else {
+        await addDoc(collection(db, 'lessons'), lessonData);
+      }
       onSaved();
     } catch (err) {
       console.error('Failed to save lesson:', err);
@@ -301,7 +306,7 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved }) => {
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
           <div>
-            <h1 className="font-serif text-2xl font-bold text-[#0d1b2a]">Create New Lesson</h1>
+            <h1 className="font-serif text-2xl font-bold text-[#0d1b2a]">{editLesson ? 'Edit Lesson' : 'Create New Lesson'}</h1>
             <p className="text-sm text-[#0d1b2a]/50">Build a lesson question by question</p>
           </div>
         </div>
