@@ -6,7 +6,7 @@ import React from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
-
+import { avatarFallback } from '@/lib/utils';
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
   onBack?: () => void;
@@ -92,7 +92,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
                     </p>
                   </div>
                   <img
-                    src={user.photoURL || 'https://via.placeholder.com/40'}
+                    src={user.photoURL || avatarFallback(40)}
                     alt={user.displayName || 'User'}
                     className="w-9 h-9 rounded-full border-2 border-[#c9993f]/30 object-cover"
                   />
