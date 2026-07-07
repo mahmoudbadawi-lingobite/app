@@ -283,7 +283,7 @@ const TeacherDashboard: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <img
-                          {sub.studentPhotoURL || avatarFallback(40)}
+                          src={sub.studentPhotoURL || avatarFallback(40)}
                           alt={sub.studentName}
                           className="w-11 h-11 rounded-full border-2 border-[#c9993f]/20 object-cover"
                         />
