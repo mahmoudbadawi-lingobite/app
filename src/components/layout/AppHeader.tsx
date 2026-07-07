@@ -7,13 +7,14 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
 import { avatarFallback } from '@/lib/utils';
+
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
   onBack?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
-  const { user, isTeacher, switchRole } = useAuth();
+  const { user, isTeacher, switchRole, openAvatarPicker } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#faf6ef]/90 border-b border-[#c9993f]/20 shadow-sm">
@@ -91,11 +92,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
                       {user.role}
                     </p>
                   </div>
-                  <img
-                    src={user.photoURL || avatarFallback(40)}
-                    alt={user.displayName || 'User'}
-                    className="w-9 h-9 rounded-full border-2 border-[#c9993f]/30 object-cover"
-                  />
+                  <button
+                    type="button"
+                    onClick={openAvatarPicker}
+                    title="Change your avatar"
+                    className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#c9993f]/50"
+                  >
+                    <img
+                      src={user.customAvatarUrl || user.photoURL || avatarFallback(40)}
+                      alt={user.displayName || 'User'}
+                      className="w-9 h-9 rounded-full border-2 border-[#c9993f]/30 object-cover hover:opacity-80 transition-opacity"
+                    />
+                  </button>
                 </div>
               </>
             )}
