@@ -129,7 +129,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
-              src={submission.studentPhotoURL || 'https://via.placeholder.com/48'}
+              src={submission.studentPhotoURL || avatarFallback(48)}
               alt={submission.studentName}
               className="w-12 h-12 rounded-full border-2 border-[#c9993f] object-cover"
             />
