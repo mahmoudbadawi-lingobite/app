@@ -11,7 +11,7 @@ import TeacherGradeCard from './TeacherGradeCard';
 import LessonCreator from './LessonCreator';
 import {
   Inbox, CheckCircle, Clock, Search,
-  Users, TrendingUp, GraduationCap, Loader2,
+  Users, GraduationCap, Loader2,
   Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target
 } from 'lucide-react';
 import type { StudentSubmission, Lesson } from '@/types';
