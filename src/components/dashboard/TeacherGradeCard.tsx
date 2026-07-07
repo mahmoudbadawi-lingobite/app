@@ -61,7 +61,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
     }
   };
 
-  const handleSubmitGrade = async () => {
+  const handleSubmitGrade = async (): Promise<string | undefined> => {
     let audioUrl: string | undefined = undefined;
     if (audioRecorder.audioBlob) {
       try {
@@ -79,14 +79,15 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
       competenceFlags,
       flawFlags,
     });
+    return audioUrl;
   };
 
   const handleSubmitAndEmail = async () => {
-    await handleSubmitGrade();
-    await handleSendEmail();
+    const uploadedAudioUrl = await handleSubmitGrade();
+    await handleSendEmail(uploadedAudioUrl);
   };
 
-  const handleSendEmail = async () => {
+  const handleSendEmail = async (overrideAudioUrl?: string) => {
     try {
       await sendFeedbackEmail({
         student_name: submission.studentName || "Student",
@@ -101,7 +102,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         flaw_flags: flawFlags.length > 0
           ? flawFlags.join(', ')
           : (submission.flawFlags?.join(', ') || 'None specified'),
-        audio_feedback_url: audioRecorder.audioUrl || submission.teacherAudioFeedbackUrl || '',
+        audio_feedback_url: overrideAudioUrl || submission.teacherAudioFeedbackUrl || '',
       });
       setEmailSent(true);
     } catch (err) {
