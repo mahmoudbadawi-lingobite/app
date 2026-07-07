@@ -54,6 +54,7 @@ const PronunciationModule: React.FC<Props> = ({
   const recorder = useAudioRecorder();
   const [playingAudio, setPlayingAudio] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const durationRef = useRef(0);
 
   const currentItem = items[currentIndex];
   const progress = Math.round((completedItems.size / items.length) * 100);
@@ -64,19 +65,10 @@ const PronunciationModule: React.FC<Props> = ({
   const handleRecordToggle = async () => {
     if (recorder.isRecording) {
       recorder.stopRecording();
-      // audioBlob is set async after onstop fires — poll for it
-      const waitForBlob = (retries = 20): Promise<Blob | null> =>
-        new Promise(resolve => {
-          const check = (n: number) => {
-            if (recorder.audioBlob) return resolve(recorder.audioBlob);
-            if (n <= 0) return resolve(null);
-            setTimeout(() => check(n - 1), 200);
-          };
-          check(retries);
-        });
-      const blob = await waitForBlob();
-      if (blob) {
-        let audioUrl = recorder.audioUrl || '#';
+    } else {
+      await recorder.startRecording(async (blob: Blob) => {
+        // onStop callback — blob is guaranteed ready here
+        let audioUrl = URL.createObjectURL(blob);
         try {
           const { uploadAudioRecording } = await import('@/lib/cloudinary');
           const filename = `student_pronunciation_${currentItem.id}_${Date.now()}.webm`;
@@ -90,15 +82,13 @@ const PronunciationModule: React.FC<Props> = ({
           itemType: 'pronunciation' as const,
           itemOrder: currentItem.order,
           recordedAudioUrl: audioUrl,
-          durationSeconds: recorder.duration,
+          durationSeconds: durationRef.current,
         };
         setSubmission(prev => ({
           ...prev,
           answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), newAnswer],
         }));
-      }
-    } else {
-      await recorder.startRecording();
+      });
     }
   };
 
