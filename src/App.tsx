@@ -40,11 +40,17 @@ const AppContent: React.FC = () => {
     setCurrentView('lesson');
   };
 
-  const handleLessonComplete = (submission: Partial<StudentSubmission>) => {
-    console.log('Lesson completed:', submission);
-    setCurrentView('home');
-    setActiveLesson(null);
-  };
+const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
+  try {
+    await createSubmission(submission);
+  } catch (err) {
+    console.error('Failed to save submission to Firestore:', err);
+    window.alert('Something went wrong saving your submission. Please check your connection and try again.');
+    return;
+  }
+  setCurrentView('home');
+  setActiveLesson(null);
+};
 
   const handleBackToHome = () => {
     setCurrentView('home');
