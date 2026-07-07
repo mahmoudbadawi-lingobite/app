@@ -13,6 +13,7 @@ import {
 } from '@/lib/firebase';
 import AvatarPicker from '@/components/auth/AvatarPicker';
 import type { UserProfile, UserRole } from '@/types';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 type AuthUser = UserProfile & {
   firebaseUser: {
@@ -39,6 +40,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   // Build our AuthUser from Firebase user + Firestore profile
   const buildAuthUser = async (firebaseUser: FirebaseUser): Promise<AuthUser> => {
@@ -52,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: firebaseUser.email,
       displayName: firebaseUser.displayName,
       photoURL: firebaseUser.photoURL,
+      customAvatarUrl: profile?.customAvatarUrl ?? null,
       role: (profile?.role as UserRole) || 'student',
       createdAt: profile?.createdAt?.toDate?.() || new Date(),
       lastLoginAt: profile?.lastLoginAt?.toDate?.() || new Date(),
@@ -101,11 +104,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  // Teachers can switch to student view and back (role stored in Firestore)
+// Teachers can switch to student view and back (role stored in Firestore)
   const switchRole = async (role: UserRole) => {
     if (!user) return;
     setUser({ ...user, role });
   };
+
+  const setAvatar = async (avatarUrl: string) => {
+    if (!user) return;
+    await updateUserAvatar(user.uid, avatarUrl);
+    setUser({ ...user, customAvatarUrl: avatarUrl });
+    setAvatarPickerOpen(false);
+  };
+
+  const openAvatarPicker = () => setAvatarPickerOpen(true);
+
+  // First-time users (no avatar chosen yet) are prompted automatically and
+  // can't dismiss the picker without choosing one. Existing users can reopen
+  // it anytime via openAvatarPicker() (e.g. clicking their avatar).
+  const needsInitialAvatar = !!user && !user.customAvatarUrl;
+  const showAvatarPicker = needsInitialAvatar || avatarPickerOpen;
 
   return (
     <AuthContext.Provider
