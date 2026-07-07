@@ -8,10 +8,11 @@ import {
   logoutUser,
   createUserProfile,
   getUserProfile,
+  updateUserAvatar,
   onAuthChange,
 } from '@/lib/firebase';
+import AvatarPicker from '@/components/auth/AvatarPicker';
 import type { UserProfile, UserRole } from '@/types';
-import type { User as FirebaseUser } from 'firebase/auth';
 
 type AuthUser = UserProfile & {
   firebaseUser: {
@@ -29,6 +30,8 @@ interface AuthContextType {
   isTeacher: boolean;
   isStudent: boolean;
   switchRole: (role: UserRole) => Promise<void>;
+  setAvatar: (avatarUrl: string) => Promise<void>;
+  openAvatarPicker: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
