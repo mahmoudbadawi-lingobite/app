@@ -19,7 +19,7 @@ import type { StudentSubmission } from '@/types';
 import { fmtTimestamp } from '@/lib/firebase';
 import { sendFeedbackEmail } from '@/lib/emailjs';
 import SubmissionReview from './SubmissionReview';
-
+import { avatarFallback } from '@/lib/utils';
 interface Props {
   submission: StudentSubmission;
   onGrade: (data: {
