@@ -27,9 +27,10 @@ interface Props {
   onComplete: (submission: Partial<StudentSubmission>) => void;
   onBack: () => void;
   teacherView?: boolean;
+  onProgress?: (progress: number) => void;
 }
 
-const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView }) => {
+const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, onProgress }) => {
   const { user } = useAuth();
   const items = lesson.items as VocabItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -219,18 +220,22 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
         </div>
 
         {/* YouTube Video */}
-        {lesson.youtubeUrl && (
-          <Card className="lb-card p-1 mb-6 overflow-hidden">
-            <div className="aspect-video rounded-[1rem] overflow-hidden">
-              <iframe
-                src={lesson.youtubeUrl.includes('embed') ? lesson.youtubeUrl : lesson.youtubeUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
-                className="w-full h-full"
-                allowFullScreen
-                title="Lesson video"
-              />
+        <Card className="lb-card p-1 mb-6 overflow-hidden">
+          <div className="aspect-video bg-[#0d1b2a] rounded-[1rem] flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b2a] to-[#1a2d42]" />
+            <div className="relative z-10 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#38a169] flex items-center justify-center mx-auto mb-3">
+                <Lightbulb className="w-7 h-7 text-white" />
+              </div>
+              <p className="text-[#faf6ef]/80 text-sm font-medium">Vocabulary Instruction</p>
             </div>
-          </Card>
-        )}
+            <img
+              src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200&h=675&fit=crop"
+              alt="Vocabulary lesson"
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
+            />
+          </div>
+        </Card>
 
         {/* Practice Card */}
         <Card className="lb-card p-6 sm:p-8 mb-6">

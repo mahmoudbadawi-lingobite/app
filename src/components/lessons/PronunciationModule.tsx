@@ -24,6 +24,7 @@ interface Props {
   onBack: () => void;
   teacherView?: boolean;
   existingSubmission?: StudentSubmission | null;
+  onProgress?: (progress: number) => void;
 }
 
 const PronunciationModule: React.FC<Props> = ({
@@ -32,6 +33,7 @@ const PronunciationModule: React.FC<Props> = ({
   onBack: _onBack,
   teacherView = false,
   existingSubmission,
+  onProgress,
 }) => {
   const { user } = useAuth();
   const items = lesson.items.filter(i => i.type === 'pronunciation') as PronunciationItem[];
@@ -58,7 +60,7 @@ const PronunciationModule: React.FC<Props> = ({
 
   const currentItem = items[currentIndex];
   const progress = Math.round((completedItems.size / items.length) * 100);
-  void progress;
+  React.useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
   const isCompleted = completedItems.has(currentIndex);
   void isCompleted;
 
