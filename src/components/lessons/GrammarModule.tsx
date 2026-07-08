@@ -41,7 +41,8 @@ const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
-    studentName: user?.displayName || '',
+studentName: user?.displayName || '',
+    studentEmail: user?.email || '',
     studentPhotoURL: user?.customAvatarUrl || user?.photoURL || undefined,
     lessonId: lesson.id,
     lessonTitle: lesson.title,
