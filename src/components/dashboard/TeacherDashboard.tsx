@@ -21,6 +21,7 @@ import {
 } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { avatarFallback } from '@/lib/utils';
+
 type Tab = 'submissions' | 'lessons';
 
 const TeacherDashboard: React.FC = () => {
@@ -89,6 +90,7 @@ const TeacherDashboard: React.FC = () => {
     teacherAudioFeedbackUrl?: string;
     competenceFlags: string[];
     flawFlags: string[];
+    answers: StudentSubmission['answers'];
   }) => {
     try {
       await updateSubmission(submissionId, {
