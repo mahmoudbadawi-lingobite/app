@@ -17,6 +17,7 @@ interface FeedbackEmailParams {
   feedback: string;
   competence_flags?: string;
   flaw_flags?: string;
+  question_comments?: string;
   audio_feedback_url?: string;
 }
 
@@ -33,6 +34,7 @@ export const sendFeedbackEmail = async (params: FeedbackEmailParams): Promise<vo
       feedback: params.feedback,
       competence_flags: params.competence_flags || 'None specified',
       flaw_flags: params.flaw_flags || 'None specified',
+      question_comments: params.question_comments || 'No per-question comments.',
       audio_feedback_url: params.audio_feedback_url || '',
     },
     { publicKey: PUBLIC_KEY }
