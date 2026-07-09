@@ -34,7 +34,7 @@ export const sendFeedbackEmail = async (params: FeedbackEmailParams): Promise<vo
       feedback: params.feedback,
       competence_flags: params.competence_flags || 'None specified',
       flaw_flags: params.flaw_flags || 'None specified',
-      question_comments: params.question_comments || 'No per-question comments.',
+      question_comments: params.question_comments || '<p style="margin:0; color:#0d1b2a; opacity:0.5; font-style:italic;">No per-question comments.</p>',
       audio_feedback_url: params.audio_feedback_url || '',
     },
     { publicKey: PUBLIC_KEY }

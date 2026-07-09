@@ -68,8 +68,8 @@ export const createUserProfile = async (
       email: user.email,
       displayName: user.displayName || 'Anonymous',
       photoURL: user.photoURL,
-      role,
       customAvatarUrl: null,
+      role,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
       badges: [],
@@ -87,10 +87,12 @@ export const getUserProfile = async (uid: string) => {
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? (snap.data() as DocumentData) : null;
 };
+
 export const updateUserAvatar = async (uid: string, avatarUrl: string) => {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, { customAvatarUrl: avatarUrl });
 };
+
 export const getLessons = async (type?: string) => {
   let q = query(
     collection(db, 'lessons'),
@@ -114,9 +116,29 @@ export const getLessonById = async (lessonId: string) => {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
 
+// Firestore rejects `undefined` field values anywhere, including nested
+// inside arrays/objects — strip them out recursively so a stray undefined
+// deep inside (e.g. an unset optional field on one item in an array) never
+// silently breaks the whole write.
+const stripUndefinedDeep = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(stripUndefinedDeep);
+  }
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) {
+        cleaned[key] = stripUndefinedDeep(v);
+      }
+    }
+    return cleaned;
+  }
+  return value;
+};
+
 export const createSubmission = async (data: Omit<DocumentData, 'id'>) => {
   return await addDoc(collection(db, 'student_submissions'), {
-    ...data,
+    ...(stripUndefinedDeep(data) as DocumentData),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -126,13 +148,7 @@ export const updateSubmission = async (
   submissionId: string,
   data: Partial<DocumentData>
 ) => {
-  // Firestore rejects `undefined` field values — strip them out
-  const cleanData: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      cleanData[key] = value;
-    }
-  }
+  const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
   await updateDoc(doc(db, 'student_submissions', submissionId), {
     ...cleanData,
     updatedAt: serverTimestamp(),
