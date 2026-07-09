@@ -158,6 +158,7 @@ export interface BaseStudentAnswer {
   itemId: string;
   itemType: string;
   itemOrder: number;
+  teacherComment?: string;
 }
 
 export interface PronunciationAnswer extends BaseStudentAnswer {
