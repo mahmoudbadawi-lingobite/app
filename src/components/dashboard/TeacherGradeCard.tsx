@@ -15,11 +15,12 @@ import {
   Award, AlertCircle, CheckCircle, ChevronDown, ChevronUp,
   Mail, Clock, BookOpen
 } from 'lucide-react';
-import type { StudentSubmission } from '@/types';
+import type { StudentSubmission, StudentAnswer } from '@/types';
 import { fmtTimestamp } from '@/lib/firebase';
+import { avatarFallback } from '@/lib/utils';
 import { sendFeedbackEmail } from '@/lib/emailjs';
 import SubmissionReview from './SubmissionReview';
-import { avatarFallback } from '@/lib/utils';
+
 interface Props {
   submission: StudentSubmission;
   onGrade: (data: {
@@ -28,6 +29,7 @@ interface Props {
     teacherAudioFeedbackUrl?: string;
     competenceFlags: string[];
     flawFlags: string[];
+    answers: StudentAnswer[];
   }) => void;
 }
 
@@ -40,6 +42,26 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
   const [emailSent, setEmailSent] = useState(submission.emailSent || false);
   const [newCompetence, setNewCompetence] = useState('');
   const [newFlaw, setNewFlaw] = useState('');
+  const [questionComments, setQuestionComments] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    (submission.answers || []).forEach(a => {
+      if (a.teacherComment) initial[a.itemId] = a.teacherComment;
+    });
+    return initial;
+  });
+
+  const handleCommentChange = (itemId: string, value: string) => {
+    setQuestionComments(prev => ({ ...prev, [itemId]: value }));
+  };
+
+  const buildQuestionCommentsText = (): string => {
+    const answers = submission.answers || [];
+    const entries = answers
+      .map((a, idx) => ({ order: idx + 1, comment: (questionComments[a.itemId] || '').trim() }))
+      .filter(e => e.comment.length > 0);
+    if (entries.length === 0) return 'No per-question comments.';
+    return entries.map(e => `Question ${e.order}: ${e.comment}`).join('\n');
+  };
 
   const audioRecorder = useAudioRecorder();
 
@@ -72,12 +94,17 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         console.error('Failed to upload audio feedback:', err);
       }
     }
+    const updatedAnswers: StudentAnswer[] = (submission.answers || []).map(a => ({
+      ...a,
+      teacherComment: questionComments[a.itemId]?.trim() || undefined,
+    }));
     onGrade({
       totalScore: parseInt(score) || 0,
       teacherWrittenFeedback: writtenFeedback,
       teacherAudioFeedbackUrl: audioUrl,
       competenceFlags,
       flawFlags,
+      answers: updatedAnswers,
     });
     return audioUrl;
   };
@@ -102,6 +129,7 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         flaw_flags: flawFlags.length > 0
           ? flawFlags.join(', ')
           : (submission.flawFlags?.join(', ') || 'None specified'),
+        question_comments: buildQuestionCommentsText(),
         audio_feedback_url: overrideAudioUrl || submission.teacherAudioFeedbackUrl || '',
       });
       setEmailSent(true);
@@ -193,7 +221,12 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
           </div>
 
           {/* Student Answers - Full Lesson Review */}
-          <SubmissionReview submission={submission} />
+          <SubmissionReview
+            submission={submission}
+            comments={questionComments}
+            onCommentChange={handleCommentChange}
+            readOnly={isGraded}
+          />
 
           {/* Score Input */}
           <div>
