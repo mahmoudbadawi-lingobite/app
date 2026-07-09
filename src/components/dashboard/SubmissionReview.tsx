@@ -15,12 +15,14 @@ import {
 
 interface Props {
   submission: StudentSubmission;
+  comments: Record<string, string>;
+  onCommentChange: (itemId: string, value: string) => void;
+  readOnly?: boolean;
 }
 
-const SubmissionReview: React.FC<Props> = ({ submission }) => {
+const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChange, readOnly }) => {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetch = async () => {
@@ -227,10 +229,11 @@ const SubmissionReview: React.FC<Props> = ({ submission }) => {
                 </div>
                 <textarea
                   value={comments[item.id] || ''}
-                  onChange={e => setComments(prev => ({ ...prev, [item.id]: e.target.value }))}
+                  onChange={e => onCommentChange(item.id, e.target.value)}
+                  disabled={readOnly}
                   placeholder="Add a comment..."
                   rows={2}
-                  className="w-full text-sm bg-[#faf6ef] border border-[#e5ddd0] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#c9993f] text-[#0d1b2a] placeholder-[#0d1b2a]/30"
+                  className="w-full text-sm bg-[#faf6ef] border border-[#e5ddd0] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#c9993f] text-[#0d1b2a] placeholder-[#0d1b2a]/30 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
