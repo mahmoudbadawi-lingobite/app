@@ -42,25 +42,27 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
   const [emailSent, setEmailSent] = useState(submission.emailSent || false);
   const [newCompetence, setNewCompetence] = useState('');
   const [newFlaw, setNewFlaw] = useState('');
-  const [questionComments, setQuestionComments] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    (submission.answers || []).forEach(a => {
-      if (a.teacherComment) initial[a.itemId] = a.teacherComment;
+  const [questionComments, setQuestionComments] = useState<Record<number, string>>(() => {
+    const initial: Record<number, string> = {};
+    (submission.answers || []).forEach((a, idx) => {
+      if (a.teacherComment) initial[idx] = a.teacherComment;
     });
     return initial;
   });
 
-  const handleCommentChange = (itemId: string, value: string) => {
-    setQuestionComments(prev => ({ ...prev, [itemId]: value }));
+  const handleCommentChange = (index: number, value: string) => {
+    setQuestionComments(prev => ({ ...prev, [index]: value }));
   };
 
   const buildQuestionCommentsText = (): string => {
     const answers = submission.answers || [];
-    const entries = answers
-      .map((a, idx) => ({ order: idx + 1, comment: (questionComments[a.itemId] || '').trim() }))
-      .filter(e => e.comment.length > 0);
+    const entries: string[] = [];
+    answers.forEach((_, idx) => {
+      const comment = (questionComments[idx] || '').trim();
+      if (comment) entries.push(`Question ${idx + 1}: ${comment}`);
+    });
     if (entries.length === 0) return 'No per-question comments.';
-    return entries.map(e => `Question ${e.order}: ${e.comment}`).join('\n');
+    return entries.join('\n');
   };
 
   const audioRecorder = useAudioRecorder();
@@ -94,9 +96,9 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         console.error('Failed to upload audio feedback:', err);
       }
     }
-    const updatedAnswers: StudentAnswer[] = (submission.answers || []).map(a => ({
+    const updatedAnswers: StudentAnswer[] = (submission.answers || []).map((a, idx) => ({
       ...a,
-      teacherComment: questionComments[a.itemId]?.trim() || undefined,
+      teacherComment: questionComments[idx]?.trim() || undefined,
     }));
     onGrade({
       totalScore: parseInt(score) || 0,

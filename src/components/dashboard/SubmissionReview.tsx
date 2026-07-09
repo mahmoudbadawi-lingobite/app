@@ -15,8 +15,8 @@ import {
 
 interface Props {
   submission: StudentSubmission;
-  comments: Record<string, string>;
-  onCommentChange: (itemId: string, value: string) => void;
+  comments: Record<number, string>;
+  onCommentChange: (index: number, value: string) => void;
   readOnly?: boolean;
 }
 
@@ -228,8 +228,8 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
                   <span className="text-xs text-[#0d1b2a]/40">Teacher comment on this question</span>
                 </div>
                 <textarea
-                  value={comments[item.id] || ''}
-                  onChange={e => onCommentChange(item.id, e.target.value)}
+                  value={comments[idx] || ''}
+                  onChange={e => onCommentChange(idx, e.target.value)}
                   disabled={readOnly}
                   placeholder="Add a comment..."
                   rows={2}
