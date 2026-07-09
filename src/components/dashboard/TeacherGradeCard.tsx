@@ -56,13 +56,21 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
 
   const buildQuestionCommentsText = (): string => {
     const answers = submission.answers || [];
-    const entries: string[] = [];
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const lines: string[] = [];
     answers.forEach((_, idx) => {
       const comment = (questionComments[idx] || '').trim();
-      if (comment) entries.push(`Question ${idx + 1}: ${comment}`);
+      if (comment) {
+        lines.push(
+          `<p style="margin:0 0 8px; color:#0d1b2a; line-height:1.6;"><strong>Question ${idx + 1}:</strong> ${escapeHtml(comment)}</p>`
+        );
+      }
     });
-    if (entries.length === 0) return 'No per-question comments.';
-    return entries.join('\n');
+    if (lines.length === 0) {
+      return '<p style="margin:0; color:#0d1b2a; opacity:0.5; font-style:italic;">No per-question comments.</p>';
+    }
+    return lines.join('');
   };
 
   const audioRecorder = useAudioRecorder();
@@ -96,10 +104,11 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
         console.error('Failed to upload audio feedback:', err);
       }
     }
-    const updatedAnswers: StudentAnswer[] = (submission.answers || []).map((a, idx) => ({
-      ...a,
-      teacherComment: questionComments[idx]?.trim() || undefined,
-    }));
+    const updatedAnswers: StudentAnswer[] = (submission.answers || []).map((a, idx) => {
+      const comment = questionComments[idx]?.trim();
+      const { teacherComment: _existing, ...rest } = a as StudentAnswer & { teacherComment?: string };
+      return comment ? ({ ...rest, teacherComment: comment } as StudentAnswer) : (rest as StudentAnswer);
+    });
     onGrade({
       totalScore: parseInt(score) || 0,
       teacherWrittenFeedback: writtenFeedback,
