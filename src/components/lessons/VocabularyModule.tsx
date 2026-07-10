@@ -19,6 +19,7 @@ import type {
   VocabularyMCQItem, StudentSubmission, StudentAnnotation
 } from '@/types';
 import { useAuth } from '@/components/auth/AuthProvider';
+import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 
 type VocabItem = VocabularyFillInItem | VocabularyImageItem | VocabularyMCQItem;
 
@@ -27,10 +28,11 @@ interface Props {
   onComplete: (submission: Partial<StudentSubmission>) => void;
   onBack: () => void;
   teacherView?: boolean;
+  existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
 }
 
-const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, onProgress }) => {
+const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress }) => {
   const { user } = useAuth();
   const items = lesson.items as VocabItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -38,6 +40,7 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
   const [showResult, setShowResult] = useState<Record<string, boolean>>({});
   const [imageAnnotations, setImageAnnotations] = useState<StudentAnnotation[]>([]);
   const [annotationMode, setAnnotationMode] = useState(false);
+  const [showPeerReview, setShowPeerReview] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
@@ -308,6 +311,25 @@ status: 'in_progress',
             )}
           </button>
         </div>
+
+        {/* Peer Review Toggle */}
+        {existingSubmission && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowPeerReview(!showPeerReview)}
+              className="text-sm text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors underline underline-offset-4"
+            >
+              {showPeerReview ? 'Hide' : 'View'} Peer Reviews
+            </button>
+          </div>
+        )}
+
+        {/* Peer Review Panel */}
+        {showPeerReview && existingSubmission && (
+          <div className="mt-6">
+            <PeerReviewPanel submissionId={existingSubmission.id} />
+          </div>
+        )}
       </div>
     </div>
   );

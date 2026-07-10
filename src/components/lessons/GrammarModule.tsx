@@ -18,6 +18,7 @@ import type {
   Lesson, GrammarMCQItem, GrammarSentenceItem, StudentSubmission
 } from '@/types';
 import { useAuth } from '@/components/auth/AuthProvider';
+import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 
 type GrammarItem = GrammarMCQItem | GrammarSentenceItem;
 
@@ -26,10 +27,11 @@ interface Props {
   onComplete: (submission: Partial<StudentSubmission>) => void;
   onBack: () => void;
   teacherView?: boolean;
+  existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
 }
 
-const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, onProgress }) => {
+const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress }) => {
   const { user } = useAuth();
   const items = lesson.items as GrammarItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -38,6 +40,7 @@ const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
   const [sentenceWords, setSentenceWords] = useState<string[]>([]);
   const [customWord, setCustomWord] = useState('');
   const [sparkedSentence, setSparkedSentence] = useState('');
+  const [showPeerReview, setShowPeerReview] = useState(false);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
@@ -284,6 +287,25 @@ studentName: user?.displayName || '',
             )}
           </button>
         </div>
+
+        {/* Peer Review Toggle */}
+        {existingSubmission && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowPeerReview(!showPeerReview)}
+              className="text-sm text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors underline underline-offset-4"
+            >
+              {showPeerReview ? 'Hide' : 'View'} Peer Reviews
+            </button>
+          </div>
+        )}
+
+        {/* Peer Review Panel */}
+        {showPeerReview && existingSubmission && (
+          <div className="mt-6">
+            <PeerReviewPanel submissionId={existingSubmission.id} />
+          </div>
+        )}
       </div>
     </div>
   );
