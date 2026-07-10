@@ -202,6 +202,18 @@ export const getPeerReviewsForSubmission = async (submissionId: string) => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+// Reviews a given student has *left* on classmates' work (used for
+// student-facing progress/engagement stats).
+export const getPeerReviewsByReviewer = async (reviewerId: string) => {
+  const q = query(
+    collection(db, 'peer_reviews'),
+    where('reviewerId', '==', reviewerId),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
 // --- Badges ---
 export const getAllBadges = async () => {
   const snap = await getDocs(
