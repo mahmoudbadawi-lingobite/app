@@ -2,7 +2,7 @@
 // LingoBite - Main Application Router
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import AuthProvider, { useAuth } from '@/components/auth/AuthProvider';
 import LessonCard from '@/components/lessons/LessonCard';
@@ -11,18 +11,19 @@ import VocabularyModule from '@/components/lessons/VocabularyModule';
 import GrammarModule from '@/components/lessons/GrammarModule';
 import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
-import { createSubmission } from '@/lib/firebase';
+import StudentProgress from '@/components/progress/StudentProgress';
+import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
-  Sparkles, TrendingUp, Users, Zap
+  Sparkles, TrendingUp, Users, Zap, BarChart3
 } from 'lucide-react';
-import { ALL_LESSONS, MOCK_SUBMISSIONS } from '@/lib/mockData';
+import { ALL_LESSONS } from '@/lib/mockData';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
-type View = 'home' | 'lesson' | 'teacher' | 'badges';
+type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress';
 
 const AppContent: React.FC = () => {
   const { user, isTeacher } = useAuth();
@@ -30,6 +31,39 @@ const AppContent: React.FC = () => {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('all');
+
+  // Real submissions for the signed-in student, replacing the old mock
+  // data used to derive lesson progress badges and home stats.
+  const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
+  const [peerReviewsGiven, setPeerReviewsGiven] = useState(0);
+
+  const isHome = currentView === 'home';
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user) {
+        if (!cancelled) {
+          setStudentSubmissions([]);
+          setPeerReviewsGiven(0);
+        }
+        return;
+      }
+      try {
+        const [subs, reviews] = await Promise.all([
+          getStudentSubmissions(user.uid),
+          getPeerReviewsByReviewer(user.uid),
+        ]);
+        if (cancelled) return;
+        setStudentSubmissions(subs as StudentSubmission[]);
+        setPeerReviewsGiven(reviews.length);
+      } catch (err) {
+        console.error('Failed to load student submissions:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+    // Re-fetch whenever we land back on Home so a just-completed lesson
+    // shows up immediately (e.g. after handleLessonComplete navigates back).
+  }, [user, isHome]);
 
   const pronLessons = ALL_LESSONS.filter(l => l.type === 'pronunciation');
   const vocabLessons = ALL_LESSONS.filter(l => l.type === 'vocabulary');
@@ -60,7 +94,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
 
   const renderLessonModule = () => {
     if (!activeLesson) return null;
-    const existingSubmission = MOCK_SUBMISSIONS.find(
+    const existingSubmission = studentSubmissions.find(
       s => s.lessonId === activeLesson.id
     ) || null;
 
@@ -102,7 +136,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
   };
 
   const getLessonProgress = (lessonId: string) => {
-    const sub = MOCK_SUBMISSIONS.find(s => s.lessonId === lessonId);
+    const sub = studentSubmissions.find(s => s.lessonId === lessonId);
     if (sub?.status === 'graded') return 100;
     if (sub?.status === 'submitted') return 75;
     return 0;
@@ -140,6 +174,12 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
                 >
                   <Trophy className="w-4 h-4" /> View Achievements
                 </button>
+                <button
+                  onClick={() => setCurrentView('progress')}
+                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                >
+                  <BarChart3 className="w-4 h-4" /> My Progress
+                </button>
                 {isTeacher && (
                   <button
                     onClick={() => setCurrentView('teacher')}
@@ -157,9 +197,9 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Lessons Available', value: ALL_LESSONS.length, icon: BookOpen, color: 'text-[#c9993f]' },
-            { label: 'Completed', value: MOCK_SUBMISSIONS.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
-            { label: 'Peer Reviews', value: 12, icon: Users, color: 'text-[#8b5cf6]' },
-            { label: 'Current Streak', value: `${user?.currentStreak || 5} days`, icon: Zap, color: 'text-orange-500' },
+            { label: 'Completed', value: studentSubmissions.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
+            { label: 'Peer Reviews', value: peerReviewsGiven, icon: Users, color: 'text-[#8b5cf6]' },
+            { label: 'Current Streak', value: `${user?.currentStreak || 0} days`, icon: Zap, color: 'text-orange-500' },
           ].map((stat, idx) => (
             <Card key={idx} className="lb-card p-4">
               <div className="flex items-center gap-3">
@@ -231,7 +271,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
           </TabsContent>
 
           <TabsContent value="vocabulary" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {vocabLessons.map(lesson => (
                 <LessonCard
                   key={lesson.id}
@@ -286,6 +326,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
       {currentView === 'lesson' && renderLessonModule()}
       {currentView === 'teacher' && <TeacherDashboard />}
       {currentView === 'badges' && <BadgeShowcase />}
+      {currentView === 'progress' && <StudentProgress />}
     </div>
   );
 };
