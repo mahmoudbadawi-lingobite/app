@@ -12,6 +12,7 @@ import GrammarModule from '@/components/lessons/GrammarModule';
 import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
 import StudentProgress from '@/components/progress/StudentProgress';
+import PeerFeedbackBrowser from '@/components/peer/PeerFeedbackBrowser';
 import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,7 +24,7 @@ import { ALL_LESSONS } from '@/lib/mockData';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
-type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress';
+type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress' | 'peer';
 
 const AppContent: React.FC = () => {
   const { user, isTeacher } = useAuth();
@@ -117,6 +118,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             onComplete={handleLessonComplete}
             onBack={handleBackToHome}
             teacherView={isTeacher}
+            existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
           />
         );
@@ -127,6 +129,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             onComplete={handleLessonComplete}
             onBack={handleBackToHome}
             teacherView={isTeacher}
+            existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
           />
         );
@@ -179,6 +182,12 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
                   className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
                 >
                   <BarChart3 className="w-4 h-4" /> My Progress
+                </button>
+                <button
+                  onClick={() => setCurrentView('peer')}
+                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" /> Peer Feedback
                 </button>
                 {isTeacher && (
                   <button
@@ -327,6 +336,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
       {currentView === 'teacher' && <TeacherDashboard />}
       {currentView === 'badges' && <BadgeShowcase />}
       {currentView === 'progress' && <StudentProgress />}
+      {currentView === 'peer' && <PeerFeedbackBrowser />}
     </div>
   );
 };
