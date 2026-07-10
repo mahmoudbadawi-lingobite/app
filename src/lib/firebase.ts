@@ -184,6 +184,20 @@ export const getPendingSubmissions = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+// Submitted/graded work from any student, used to power the peer-feedback
+// browser. Filtering out the signed-in student's own submissions happens
+// client-side to avoid needing an extra composite index for an inequality
+// filter.
+export const getSubmissionsForPeerFeedback = async () => {
+  const q = query(
+    collection(db, 'student_submissions'),
+    where('status', 'in', ['submitted', 'graded']),
+    orderBy('submittedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
 // --- Peer Reviews ---
 export const addPeerReview = async (data: Omit<DocumentData, 'id'>) => {
   return await addDoc(collection(db, 'peer_reviews'), {
