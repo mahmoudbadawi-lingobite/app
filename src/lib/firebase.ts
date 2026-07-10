@@ -202,6 +202,13 @@ export const getPeerReviewsForSubmission = async (submissionId: string) => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+export const updatePeerReviewReactions = async (
+  reviewId: string,
+  emojiReactions: { emoji: string; count: number; userIds: string[] }[]
+) => {
+  await updateDoc(doc(db, 'peer_reviews', reviewId), { emojiReactions });
+};
+
 // Reviews a given student has *left* on classmates' work (used for
 // student-facing progress/engagement stats).
 export const getPeerReviewsByReviewer = async (reviewerId: string) => {
