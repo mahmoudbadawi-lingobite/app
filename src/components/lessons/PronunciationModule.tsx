@@ -353,19 +353,21 @@ status: 'in_progress',
         </div>
 
         {/* Peer Review Toggle */}
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => setShowPeerReview(!showPeerReview)}
-            className="text-sm text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors underline underline-offset-4"
-          >
-            {showPeerReview ? 'Hide' : 'View'} Peer Reviews
-          </button>
-        </div>
+        {existingSubmission && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowPeerReview(!showPeerReview)}
+              className="text-sm text-[#c9993f] hover:text-[#0d1b2a] font-medium transition-colors underline underline-offset-4"
+            >
+              {showPeerReview ? 'Hide' : 'View'} Peer Reviews
+            </button>
+          </div>
+        )}
 
         {/* Peer Review Panel */}
-        {showPeerReview && (
+        {showPeerReview && existingSubmission && (
           <div className="mt-6">
-            <PeerReviewPanel submissionId="sub_001" />
+            <PeerReviewPanel submissionId={existingSubmission.id} />
           </div>
         )}
 
