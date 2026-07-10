@@ -1,19 +1,22 @@
 // ============================================================
-// LingoBite - Peer Review System
+// LingoBite - Peer Review System (Firestore-powered)
 // Anonymous timeline with emoji reactions
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ThumbsUp, Star, Flame, Heart, Lightbulb,
-  Send, MessageCircle, User, Clock
+  Send, MessageCircle, User, Clock, Loader2
 } from 'lucide-react';
-import { MOCK_PEER_REVIEWS } from '@/lib/mockData';
 import type { PeerReview } from '@/types';
-import { fmtTimestamp } from '@/lib/firebase';
+import {
+  fmtTimestamp, getPeerReviewsForSubmission,
+  addPeerReview, updatePeerReviewReactions,
+} from '@/lib/firebase';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 interface Props {
   submissionId: string;
@@ -28,69 +31,89 @@ const EMOJI_OPTIONS = [
   { emoji: '💡', icon: Lightbulb, label: 'Insightful' },
 ];
 
+const generateAnonymousName = () => {
+  const adjectives = ['Creative', 'Bright', 'Curious', 'Eager', 'Happy', 'Witty', 'Brave', 'Calm'];
+  const animals = ['Panda', 'Tiger', 'Eagle', 'Dolphin', 'Owl', 'Fox', 'Wolf', 'Bear'];
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const animal = animals[Math.floor(Math.random() * animals.length)];
+  const suffix = Math.floor(Math.random() * 99);
+  return `${adjective}${animal}_${suffix}`;
+};
+
 const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
-  const [reviews, setReviews] = useState<PeerReview[]>(MOCK_PEER_REVIEWS);
+  const { user } = useAuth();
+  const [reviews, setReviews] = useState<PeerReview[]>([]);
+  const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
-  const [userReactions, setUserReactions] = useState<Record<string, string[]>>({});
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleEmojiClick = (reviewId: string, emoji: string) => {
-    const current = userReactions[reviewId] || [];
-    const hasReacted = current.includes(emoji);
-    
-    setUserReactions(prev => ({
-      ...prev,
-      [reviewId]: hasReacted
-        ? current.filter(e => e !== emoji)
-        : [...current, emoji],
-    }));
-
-    setReviews(prev =>
-      prev.map(review => {
-        if (review.id !== reviewId) return review;
-        const reactions = [...review.emojiReactions];
-        const existingIdx = reactions.findIndex(r => r.emoji === emoji);
-        if (existingIdx >= 0) {
-          const existing = reactions[existingIdx];
-          if (hasReacted) {
-            reactions[existingIdx] = {
-              ...existing,
-              count: Math.max(0, existing.count - 1),
-              userIds: existing.userIds.filter(() => true), // mock
-            };
-          } else {
-            reactions[existingIdx] = {
-              ...existing,
-              count: existing.count + 1,
-              userIds: [...existing.userIds, 'current_user'],
-            };
-          }
-        } else if (!hasReacted) {
-          reactions.push({ emoji, count: 1, userIds: ['current_user'] });
-        }
-        return { ...review, emojiReactions: reactions };
-      })
-    );
+  const loadReviews = async () => {
+    try {
+      const data = await getPeerReviewsForSubmission(submissionId);
+      setReviews(data as PeerReview[]);
+    } catch (err) {
+      console.error('Failed to load peer reviews:', err);
+      setError('Could not load peer reviews right now.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCommentSubmit = () => {
-    if (!comment.trim()) return;
-    const newReview: PeerReview = {
-      id: `pr_${Date.now()}`,
-      submissionId,
-      reviewerId: 'current_user',
-      reviewerName: generateAnonymousName(),
-      createdAt: new Date(),
-      emojiReactions: [],
-      writtenComment: comment.trim(),
-    };
-    setReviews(prev => [newReview, ...prev]);
-    setComment('');
+  useEffect(() => {
+    setLoading(true);
+    loadReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submissionId]);
+
+  const handleEmojiClick = async (review: PeerReview, emoji: string) => {
+    if (!user) return;
+    const reactions = review.emojiReactions.map(r => ({ ...r, userIds: [...r.userIds] }));
+    const idx = reactions.findIndex(r => r.emoji === emoji);
+    const hasReacted = idx >= 0 && reactions[idx].userIds.includes(user.uid);
+
+    if (idx >= 0) {
+      if (hasReacted) {
+        reactions[idx].userIds = reactions[idx].userIds.filter(id => id !== user.uid);
+        reactions[idx].count = Math.max(0, reactions[idx].count - 1);
+      } else {
+        reactions[idx].userIds.push(user.uid);
+        reactions[idx].count += 1;
+      }
+    } else {
+      reactions.push({ emoji, count: 1, userIds: [user.uid] });
+    }
+
+    // Optimistic UI update, then persist; roll back on failure.
+    setReviews(prev => prev.map(r => (r.id === review.id ? { ...r, emojiReactions: reactions } : r)));
+    try {
+      await updatePeerReviewReactions(review.id, reactions);
+    } catch (err) {
+      console.error('Failed to save reaction:', err);
+      setReviews(prev => prev.map(r => (r.id === review.id ? review : r)));
+    }
   };
 
-  const generateAnonymousName = () => {
-    const adjectives = ['Creative', 'Bright', 'Curious', 'Eager', 'Happy', 'Witty', 'Brave', 'Calm'];
-    const animals = ['Panda', 'Tiger', 'Eagle', 'Dolphin', 'Owl', 'Fox', 'Wolf', 'Bear'];
-    return `${adjectives[Math.floor(Math.random() * adjectives.length)]}${animals[Math.floor(Math.random() * animals.length)]}_${Math.floor(Math.random() * 99)}`;
+  const handleCommentSubmit = async () => {
+    if (!comment.trim() || !user || posting) return;
+    setPosting(true);
+    setError(null);
+    try {
+      await addPeerReview({
+        submissionId,
+        reviewerId: user.uid,
+        reviewerName: generateAnonymousName(),
+        emojiReactions: [],
+        writtenComment: comment.trim(),
+      });
+      setComment('');
+      await loadReviews();
+    } catch (err) {
+      console.error('Failed to post peer review:', err);
+      setError('Could not post your comment. Please try again.');
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -103,6 +126,12 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
         </Badge>
       </div>
 
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
       {/* Comment Input */}
       <div className="mb-6 p-4 bg-[#faf6ef] rounded-xl">
         <Textarea
@@ -114,67 +143,80 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
         <div className="flex justify-end">
           <button
             onClick={handleCommentSubmit}
-            disabled={!comment.trim()}
+            disabled={!comment.trim() || posting}
             className="lb-btn-gold flex items-center gap-2 text-sm disabled:opacity-50"
           >
-            <Send className="w-4 h-4" /> Post Comment
+            {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Post Comment
           </button>
         </div>
       </div>
 
       {/* Reviews Timeline */}
-      <div className="space-y-4 max-h-[500px] overflow-y-auto lb-scroll pr-2">
-        {reviews.map(review => (
-          <div
-            key={review.id}
-            className="p-4 rounded-xl border border-[#e5ddd0] hover:border-[#c9993f]/30 transition-all bg-white"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#0d1b2a]/10 flex items-center justify-center">
-                  <User className="w-4 h-4 text-[#0d1b2a]/50" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#0d1b2a]">{review.reviewerName}</p>
-                  <p className="text-xs text-[#0d1b2a]/40 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {fmtTimestamp(review.createdAt)}
-                  </p>
+      {loading ? (
+        <div className="flex items-center justify-center py-10 gap-2 text-[#0d1b2a]/40">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Loading peer reviews...</span>
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="text-center py-10">
+          <MessageCircle className="w-10 h-10 text-[#0d1b2a]/15 mx-auto mb-2" />
+          <p className="text-sm text-[#0d1b2a]/40">No peer reviews yet — be the first to leave one!</p>
+        </div>
+      ) : (
+        <div className="space-y-4 max-h-[500px] overflow-y-auto lb-scroll pr-2">
+          {reviews.map(review => (
+            <div
+              key={review.id}
+              className="p-4 rounded-xl border border-[#e5ddd0] hover:border-[#c9993f]/30 transition-all bg-white"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#0d1b2a]/10 flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#0d1b2a]/50" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#0d1b2a]">{review.reviewerName}</p>
+                    <p className="text-xs text-[#0d1b2a]/40 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {fmtTimestamp(review.createdAt)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {review.writtenComment && (
-              <p className="text-sm text-[#0d1b2a]/80 mb-3 leading-relaxed">
-                {review.writtenComment}
-              </p>
-            )}
+              {review.writtenComment && (
+                <p className="text-sm text-[#0d1b2a]/80 mb-3 leading-relaxed">
+                  {review.writtenComment}
+                </p>
+              )}
 
-            {/* Emoji Reactions */}
-            <div className="flex flex-wrap items-center gap-2">
-              {EMOJI_OPTIONS.map(({ emoji, label }) => {
-                const reaction = review.emojiReactions.find(r => r.emoji === emoji);
-                const count = reaction?.count || 0;
-                const hasReacted = (userReactions[review.id] || []).includes(emoji);
-                return (
-                  <button
-                    key={emoji}
-                    onClick={() => handleEmojiClick(review.id, emoji)}
-                    className={`lb-peer-emoji-btn ${hasReacted ? 'active' : ''} text-sm`}
-                    title={label}
-                  >
-                    <span className="text-base">{emoji}</span>
-                    {count > 0 && (
-                      <span className="text-xs font-medium text-[#0d1b2a]/50 ml-0.5">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {/* Emoji Reactions */}
+              <div className="flex flex-wrap items-center gap-2">
+                {EMOJI_OPTIONS.map(({ emoji, label }) => {
+                  const reaction = review.emojiReactions.find(r => r.emoji === emoji);
+                  const count = reaction?.count || 0;
+                  const hasReacted = !!user && (reaction?.userIds.includes(user.uid) ?? false);
+                  return (
+                    <button
+                      key={emoji}
+                      onClick={() => handleEmojiClick(review, emoji)}
+                      className={`lb-peer-emoji-btn ${hasReacted ? 'active' : ''} text-sm`}
+                      title={label}
+                    >
+                      <span className="text-base">{emoji}</span>
+                      {count > 0 && (
+                        <span className="text-xs font-medium text-[#0d1b2a]/50 ml-0.5">
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };
