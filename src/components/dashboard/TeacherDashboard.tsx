@@ -13,15 +13,15 @@ import {
   Inbox, CheckCircle, Clock, Search,
   Users, GraduationCap, Loader2,
   Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target,
-  Square, CheckSquare, X
+  Square, CheckSquare, X, Share2, Check
 } from 'lucide-react';
 import type { StudentSubmission, Lesson } from '@/types';
 import {
   getPendingSubmissions, updateSubmission, fmtTimestamp,
-  getLessons, db, deleteSubmission, deleteSubmissions, createNotification
+  getLessons, deleteSubmission, deleteSubmissions, createNotification,
+  deleteLesson, deleteLessons
 } from '@/lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { avatarFallback } from '@/lib/utils';
+import { avatarFallback, buildLessonShareUrl, copyToClipboard } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 type Tab = 'submissions' | 'lessons';
@@ -46,6 +46,9 @@ const TeacherDashboard: React.FC = () => {
   const [showCreator, setShowCreator] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set());
+  const [bulkDeletingLessons, setBulkDeletingLessons] = useState(false);
+  const [copiedLessonId, setCopiedLessonId] = useState<string | null>(null);
 
   // Load submissions
   useEffect(() => {
@@ -141,13 +144,60 @@ const TeacherDashboard: React.FC = () => {
     if (!confirm('Are you sure you want to delete this lesson? This cannot be undone.')) return;
     setDeletingId(lessonId);
     try {
-      await deleteDoc(doc(db, 'lessons', lessonId));
+      await deleteLesson(lessonId);
       setLessons(prev => prev.filter(l => l.id !== lessonId));
+      setSelectedLessonIds(prev => {
+        const next = new Set(prev);
+        next.delete(lessonId);
+        return next;
+      });
     } catch (err) {
       console.error('Failed to delete lesson:', err);
       alert('Failed to delete lesson. Please try again.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const toggleLessonSelected = (lessonId: string) => {
+    setSelectedLessonIds(prev => {
+      const next = new Set(prev);
+      if (next.has(lessonId)) next.delete(lessonId);
+      else next.add(lessonId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllLessons = () => {
+    setSelectedLessonIds(prev => {
+      const allSelected = lessons.length > 0 && lessons.every(l => prev.has(l.id));
+      if (allSelected) return new Set();
+      return new Set(lessons.map(l => l.id));
+    });
+  };
+
+  const handleBulkDeleteLessons = async () => {
+    const ids = Array.from(selectedLessonIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} lesson${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    setBulkDeletingLessons(true);
+    try {
+      await deleteLessons(ids);
+      setLessons(prev => prev.filter(l => !selectedLessonIds.has(l.id)));
+      setSelectedLessonIds(new Set());
+    } catch (err) {
+      console.error('Failed to delete lessons:', err);
+      alert('Some lessons may not have been deleted. Please refresh and try again.');
+    } finally {
+      setBulkDeletingLessons(false);
+    }
+  };
+
+  const handleShareLesson = async (lessonId: string) => {
+    const ok = await copyToClipboard(buildLessonShareUrl(lessonId));
+    if (ok) {
+      setCopiedLessonId(lessonId);
+      setTimeout(() => setCopiedLessonId(prev => (prev === lessonId ? null : prev)), 2000);
     }
   };
 
@@ -484,51 +534,117 @@ const TeacherDashboard: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {lessons.map(lesson => (
-                  <Card key={lesson.id} className="lb-card p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {getLessonIcon(lesson.type)}
-                        <Badge variant="outline" className="text-xs capitalize">{lesson.type}</Badge>
-                      </div>
-                      <Badge className={lesson.status === 'published'
-                        ? 'bg-green-50 text-green-700 border-green-200 text-xs'
-                        : 'bg-amber-50 text-amber-700 border-amber-200 text-xs'
-                      }>
-                        {lesson.status}
-                      </Badge>
+              <>
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <button
+                    onClick={toggleSelectAllLessons}
+                    className="flex items-center gap-2 text-sm font-medium text-[#0d1b2a]/60 hover:text-[#0d1b2a] transition-colors"
+                  >
+                    {lessons.every(l => selectedLessonIds.has(l.id))
+                      ? <CheckSquare className="w-4 h-4 text-[#c9993f]" />
+                      : <Square className="w-4 h-4" />
+                    }
+                    {selectedLessonIds.size > 0 ? `${selectedLessonIds.size} selected` : 'Select all'}
+                  </button>
+
+                  {selectedLessonIds.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedLessonIds(new Set())}
+                        className="flex items-center gap-1 text-xs font-medium text-[#0d1b2a]/40 hover:text-[#0d1b2a] px-2 py-1.5 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" /> Clear
+                      </button>
+                      <button
+                        onClick={handleBulkDeleteLessons}
+                        disabled={bulkDeletingLessons}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                      >
+                        {bulkDeletingLessons
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />
+                        }
+                        Delete {selectedLessonIds.size} selected
+                      </button>
                     </div>
-                    <h3 className="font-semibold text-[#0d1b2a] mb-1 line-clamp-2">{lesson.title}</h3>
-                    <p className="text-xs text-[#0d1b2a]/50 mb-4 line-clamp-2">{lesson.description}</p>
-                    <div className="flex items-center justify-between pt-3 border-t border-[#e5ddd0]">
-                      <span className="text-xs text-[#0d1b2a]/40">
-                        {(lesson.items as any[])?.length || 0} questions
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => { setEditingLesson(lesson); setShowCreator(true); }}
-                          className="p-1.5 rounded-lg hover:bg-[#faf6ef] text-[#0d1b2a]/40 hover:text-[#0d1b2a] transition-colors"
-                          title="Edit lesson"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteLesson(lesson.id)}
-                          disabled={deletingId === lesson.id}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-[#0d1b2a]/40 hover:text-red-500 transition-colors disabled:opacity-40"
-                          title="Delete lesson"
-                        >
-                          {deletingId === lesson.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <Trash2 className="w-4 h-4" />
-                          }
-                        </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lessons.map(lesson => (
+                    <Card
+                      key={lesson.id}
+                      className={`lb-card p-5 transition-all ${
+                        selectedLessonIds.has(lesson.id) ? 'ring-2 ring-[#c9993f]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleLessonSelected(lesson.id)}
+                            className="flex-shrink-0 text-[#0d1b2a]/30 hover:text-[#c9993f] transition-colors"
+                            title="Select lesson"
+                          >
+                            {selectedLessonIds.has(lesson.id)
+                              ? <CheckSquare className="w-4 h-4 text-[#c9993f]" />
+                              : <Square className="w-4 h-4" />
+                            }
+                          </button>
+                          {getLessonIcon(lesson.type)}
+                          <Badge variant="outline" className="text-xs capitalize">{lesson.type}</Badge>
+                        </div>
+                        <Badge className={lesson.status === 'published'
+                          ? 'bg-green-50 text-green-700 border-green-200 text-xs'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 text-xs'
+                        }>
+                          {lesson.status}
+                        </Badge>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                      <h3 className="font-semibold text-[#0d1b2a] mb-1 line-clamp-2">{lesson.title}</h3>
+                      <p className="text-xs text-[#0d1b2a]/50 mb-4 line-clamp-2">{lesson.description}</p>
+                      <div className="flex items-center justify-between pt-3 border-t border-[#e5ddd0]">
+                        <span className="text-xs text-[#0d1b2a]/40">
+                          {(lesson.items as any[])?.length || 0} questions
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleShareLesson(lesson.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              copiedLessonId === lesson.id
+                                ? 'text-[#38a169] bg-[#38a169]/10'
+                                : 'hover:bg-[#faf6ef] text-[#0d1b2a]/40 hover:text-[#0d1b2a]'
+                            }`}
+                            title="Copy shareable lesson link"
+                          >
+                            {copiedLessonId === lesson.id
+                              ? <Check className="w-4 h-4" />
+                              : <Share2 className="w-4 h-4" />
+                            }
+                          </button>
+                          <button
+                            onClick={() => { setEditingLesson(lesson); setShowCreator(true); }}
+                            className="p-1.5 rounded-lg hover:bg-[#faf6ef] text-[#0d1b2a]/40 hover:text-[#0d1b2a] transition-colors"
+                            title="Edit lesson"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            disabled={deletingId === lesson.id}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-[#0d1b2a]/40 hover:text-red-500 transition-colors disabled:opacity-40"
+                            title="Delete lesson"
+                          >
+                            {deletingId === lesson.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <Trash2 className="w-4 h-4" />
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
