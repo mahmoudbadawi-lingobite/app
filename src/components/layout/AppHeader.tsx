@@ -3,11 +3,11 @@
 // ============================================================
 
 import React from 'react';
-import { useAuth } from '@/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
 import { avatarFallback } from '@/lib/utils';
-import NotificationBell from '@/NotificationBell';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
