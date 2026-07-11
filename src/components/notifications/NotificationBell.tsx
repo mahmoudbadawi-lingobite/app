@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, MessageCircle, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/AuthProvider';
 import {
   subscribeToNotifications, markNotificationRead, markAllNotificationsRead,
   fmtTimestamp,
@@ -18,12 +18,14 @@ import type { AppNotification } from '@/types';
 import type { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 
 interface Props {
-  // Lets the bell take the user somewhere useful (the Peer Feedback tab)
-  // when a notification is clicked.
+  // Lets the bell take the user somewhere useful when a notification is
+  // clicked: the Peer Feedback tab for comments, the Progress tab for
+  // grading updates.
   onNavigateToPeerFeedback?: () => void;
+  onNavigateToProgress?: () => void;
 }
 
-const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback }) => {
+const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigateToProgress }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,11 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback }) => {
       }
     }
     setOpen(false);
-    onNavigateToPeerFeedback?.();
+    if (notification.type === 'submission_graded') {
+      onNavigateToProgress?.();
+    } else {
+      onNavigateToPeerFeedback?.();
+    }
   };
 
   if (!user) return null;
@@ -128,8 +134,17 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback }) => {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-[#0d1b2a] leading-snug">
                     <span className="font-semibold">{notification.fromUserName}</span>
-                    {' '}commented on your submission for{' '}
-                    <span className="font-medium">{notification.lessonTitle}</span>
+                    {notification.type === 'submission_graded' ? (
+                      <>
+                        {' '}graded your submission for{' '}
+                        <span className="font-medium">{notification.lessonTitle}</span>
+                      </>
+                    ) : (
+                      <>
+                        {' '}commented on your submission for{' '}
+                        <span className="font-medium">{notification.lessonTitle}</span>
+                      </>
+                    )}
                   </p>
                   {notification.commentPreview && (
                     <p className="text-xs text-[#0d1b2a]/50 italic mt-1 line-clamp-2">
