@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { db } from '@/lib/firebase';
 import { uploadImage } from '@/lib/cloudinary';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';

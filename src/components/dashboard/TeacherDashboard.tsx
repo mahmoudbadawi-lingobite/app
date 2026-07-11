@@ -22,7 +22,7 @@ import {
 } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { avatarFallback } from '@/lib/utils';
-import { useAuth } from '@/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 type Tab = 'submissions' | 'lessons';
 
