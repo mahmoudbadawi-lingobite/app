@@ -96,7 +96,7 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback }) => {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 bg-white border-[#e5ddd0]">
+      <PopoverContent align="end" className="w-80 p-0 bg-white border-[#e5ddd0] overflow-hidden">
         <div className="px-4 py-3 border-b border-[#e5ddd0]">
           <h3 className="font-semibold text-sm text-[#0d1b2a]">Notifications</h3>
         </div>
