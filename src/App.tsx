@@ -251,7 +251,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
 
         {/* Lesson Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="bg-white border border-[#e5ddd0] rounded-xl p-1 h-auto">
+          <TabsList className="bg-white border border-[#e5ddd0] rounded-xl p-1 h-auto w-full flex-wrap justify-start gap-1">
             <TabsTrigger
               value="all"
               className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
