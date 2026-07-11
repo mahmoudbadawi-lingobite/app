@@ -327,7 +327,11 @@ status: 'in_progress',
         {/* Peer Review Panel */}
         {showPeerReview && existingSubmission && (
           <div className="mt-6">
-            <PeerReviewPanel submissionId={existingSubmission.id} />
+            <PeerReviewPanel
+              submissionId={existingSubmission.id}
+              submissionOwnerId={existingSubmission.studentId}
+              lessonTitle={existingSubmission.lessonTitle}
+            />
           </div>
         )}
       </div>
