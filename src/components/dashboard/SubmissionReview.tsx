@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getLessonById } from '@/lib/firebase';
+import AnnotationImageViewer from '@/components/lessons/AnnotationImageViewer';
 import type { Lesson, StudentSubmission, StudentAnswer } from '@/types';
 import {
   CheckCircle, XCircle, Mic, BookOpen, Loader2,
@@ -182,35 +183,11 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
               {item.type === 'vocab_image' && (
                 <>
                   <p className="font-medium text-[#0d1b2a] mb-2">{item.instructions}</p>
-                  <div className="relative rounded-xl overflow-hidden bg-[#0d1b2a]" style={{ maxHeight: 420 }}>
-                    <img
-                      src={item.imageUrl}
-                      alt="Annotation source"
-                      className="w-full h-full object-contain"
-                    />
-                    {/* Correct answer markers */}
-                    {item.annotations?.map((ann: any) => (
-                      <div
-                        key={ann.id}
-                        className="absolute w-6 h-6 rounded-full bg-[#38a169] border-2 border-white shadow-md flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
-                        style={{ left: `${ann.x}%`, top: `${ann.y}%` }}
-                        title={ann.label}
-                      >
-                        <CheckCircle className="w-3 h-3 text-white" />
-                      </div>
-                    ))}
-                    {/* Student's placed markers */}
-                    {(answer as any)?.annotations?.map((ann: any, i: number) => (
-                      <div
-                        key={ann.id}
-                        className="absolute w-7 h-7 rounded-full bg-[#0d1b2a] text-[#c9993f] border-2 border-white shadow-lg flex items-center justify-center text-xs font-bold -translate-x-1/2 -translate-y-1/2"
-                        style={{ left: `${ann.x}%`, top: `${ann.y}%` }}
-                        title={ann.label}
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
+                  <AnnotationImageViewer
+                    imageUrl={item.imageUrl}
+                    correctMarkers={item.annotations}
+                    studentMarkers={(answer as any)?.annotations}
+                  />
                   {(answer as any)?.annotations?.length ? (
                     <div className="flex flex-wrap gap-2">
                       {(answer as any).annotations.map((ann: any, i: number) => (
