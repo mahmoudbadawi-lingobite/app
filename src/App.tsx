@@ -3,6 +3,7 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import AppHeader from '@/components/layout/AppHeader';
 import AuthProvider, { useAuth } from '@/components/auth/AuthProvider';
 import LessonCard from '@/components/lessons/LessonCard';
@@ -13,7 +14,7 @@ import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
 import StudentProgress from '@/components/progress/StudentProgress';
 import PeerFeedbackBrowser from '@/components/peer/PeerFeedbackBrowser';
-import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer, getLessons } from '@/lib/firebase';
+import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer, getLessons, getLessonById } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -27,10 +28,12 @@ type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress' | 'peer';
 
 const AppContent: React.FC = () => {
   const { user, isTeacher } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentView, setCurrentView] = useState<View>('home');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [sharedLessonNotice, setSharedLessonNotice] = useState<string | null>(null);
 
   // Real submissions for the signed-in student, replacing the old mock
   // data used to derive lesson progress badges and home stats.
@@ -91,6 +94,37 @@ const AppContent: React.FC = () => {
     return () => { cancelled = true; };
   }, [isHome]);
 
+  // Shared lesson links: if the page was opened with ?lesson=<id>, jump
+  // straight into that lesson once the user is signed in. This is what
+  // powers the "Share" button on lesson cards.
+  useEffect(() => {
+    const sharedLessonId = searchParams.get('lesson');
+    if (!user || !sharedLessonId || currentView === 'lesson') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const lesson = await getLessonById(sharedLessonId);
+        if (cancelled) return;
+        if (lesson) {
+          setActiveLesson(lesson as Lesson);
+          setLessonProgress(0);
+          setCurrentView('lesson');
+        } else {
+          setSharedLessonNotice('That shared lesson link is no longer available.');
+          setSearchParams({}, { replace: true });
+        }
+      } catch (err) {
+        console.error('Failed to load shared lesson:', err);
+        if (!cancelled) {
+          setSharedLessonNotice('Something went wrong opening that shared lesson.');
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, searchParams]);
+
   const pronLessons = lessons.filter(l => l.type === 'pronunciation');
   const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
   const grammarLessons = lessons.filter(l => l.type === 'grammar');
@@ -99,6 +133,7 @@ const AppContent: React.FC = () => {
     setActiveLesson(lesson);
     setLessonProgress(0);
     setCurrentView('lesson');
+    setSearchParams({ lesson: lesson.id }, { replace: false });
   };
 
 const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
@@ -111,11 +146,13 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
   }
   setCurrentView('home');
   setActiveLesson(null);
+  setSearchParams({}, { replace: false });
 };
 
   const handleBackToHome = () => {
     setCurrentView('home');
     setActiveLesson(null);
+    setSearchParams({}, { replace: false });
   };
 
   const renderLessonModule = () => {
@@ -174,6 +211,17 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
   const renderHome = () => (
     <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        {sharedLessonNotice && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>{sharedLessonNotice}</span>
+            <button
+              onClick={() => setSharedLessonNotice(null)}
+              className="text-amber-800/60 hover:text-amber-800 font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Hero Section */}
         <div className="relative rounded-[1.5rem] overflow-hidden mb-10 bg-gradient-to-br from-[#0d1b2a] to-[#1a2d42]">
           <div className="absolute inset-0 opacity-10">
