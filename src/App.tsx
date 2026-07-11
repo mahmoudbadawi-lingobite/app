@@ -3,16 +3,16 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
-import AppHeader from '@/components/layout/AppHeader';
-import AuthProvider, { useAuth } from '@/components/auth/AuthProvider';
-import LessonCard from '@/components/lessons/LessonCard';
-import PronunciationModule from '@/components/lessons/PronunciationModule';
-import VocabularyModule from '@/components/lessons/VocabularyModule';
-import GrammarModule from '@/components/lessons/GrammarModule';
-import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
-import BadgeShowcase from '@/components/badges/BadgeShowcase';
-import StudentProgress from '@/components/progress/StudentProgress';
-import PeerFeedbackBrowser from '@/components/peer/PeerFeedbackBrowser';
+import AppHeader from '@/AppHeader';
+import AuthProvider, { useAuth } from '@/AuthProvider';
+import LessonCard from '@/LessonCard';
+import PronunciationModule from '@/PronunciationModule';
+import VocabularyModule from '@/VocabularyModule';
+import GrammarModule from '@/GrammarModule';
+import TeacherDashboard from '@/TeacherDashboard';
+import BadgeShowcase from '@/BadgeShowcase';
+import StudentProgress from '@/StudentProgress';
+import PeerFeedbackBrowser from '@/PeerFeedbackBrowser';
 import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -329,6 +329,8 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             : null
         }
         onBack={currentView !== 'home' ? handleBackToHome : undefined}
+        onNavigateToPeerFeedback={() => setCurrentView('peer')}
+        onNavigateToProgress={() => setCurrentView('progress')}
       />
 
       {currentView === 'home' && renderHome()}
