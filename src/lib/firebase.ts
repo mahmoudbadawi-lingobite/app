@@ -116,6 +116,25 @@ export const getLessonById = async (lessonId: string) => {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
 
+export const deleteLesson = async (lessonId: string) => {
+  await deleteDoc(doc(db, 'lessons', lessonId));
+};
+
+// Bulk-delete for the teacher dashboard's "select multiple" lessons flow,
+// mirroring deleteSubmissions below. Each lesson is deleted independently
+// so one failure doesn't block the rest of the batch.
+export const deleteLessons = async (lessonIds: string[]) => {
+  const results = await Promise.allSettled(
+    lessonIds.map(id => deleteDoc(doc(db, 'lessons', id)))
+  );
+  const failed = results
+    .map((r, i) => (r.status === 'rejected' ? lessonIds[i] : null))
+    .filter((id): id is string => id !== null);
+  if (failed.length > 0) {
+    throw new Error(`Failed to delete ${failed.length} lesson(s)`);
+  }
+};
+
 // Firestore rejects `undefined` field values anywhere, including nested
 // inside arrays/objects — strip them out recursively so a stray undefined
 // deep inside (e.g. an unset optional field on one item in an array) never
