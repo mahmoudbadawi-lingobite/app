@@ -18,8 +18,8 @@ import type {
   Lesson, VocabularyFillInItem, VocabularyImageItem,
   VocabularyMCQItem, StudentSubmission, StudentAnnotation
 } from '@/types';
-import { useAuth } from '@/AuthProvider';
-import PeerReviewPanel from '@/PeerReviewPanel';
+import { useAuth } from '@/components/auth/AuthProvider';
+import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 
 type VocabItem = VocabularyFillInItem | VocabularyImageItem | VocabularyMCQItem;
 
