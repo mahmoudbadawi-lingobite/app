@@ -183,7 +183,36 @@ export const getPendingSubmissions = async () => {
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
+// Removes a submission along with any peer reviews and notifications that
+// reference it, so a teacher deleting a submission doesn't leave orphaned
+// comments/notifications behind.
+const deleteSubmissionCascade = async (submissionId: string, batch: ReturnType<typeof writeBatch>) => {
+  batch.delete(doc(db, 'student_submissions', submissionId));
 
+  const reviewsSnap = await getDocs(
+    query(collection(db, 'peer_reviews'), where('submissionId', '==', submissionId))
+  );
+  reviewsSnap.docs.forEach(d => batch.delete(d.ref));
+
+  const notificationsSnap = await getDocs(
+    query(collection(db, 'notifications'), where('submissionId', '==', submissionId))
+  );
+  notificationsSnap.docs.forEach(d => batch.delete(d.ref));
+};
+
+export const deleteSubmission = async (submissionId: string) => {
+  const batch = writeBatch(db);
+  await deleteSubmissionCascade(submissionId, batch);
+  await batch.commit();
+};
+
+export const deleteSubmissions = async (submissionIds: string[]) => {
+  for (const submissionId of submissionIds) {
+    const batch = writeBatch(db);
+    await deleteSubmissionCascade(submissionId, batch);
+    await batch.commit();
+  }
+};
 // Removes a submission along with any peer reviews and notifications that
 // reference it, so a teacher deleting a submission doesn't leave orphaned
 // comments/notifications behind. Firestore batches cap at 500 writes, so
