@@ -7,13 +7,15 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
 import { avatarFallback } from '@/lib/utils';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
   onBack?: () => void;
+  onNavigateToPeerFeedback?: () => void;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback }) => {
   const { user, isTeacher, switchRole, openAvatarPicker } = useAuth();
 
   return (
@@ -82,7 +84,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack }) => {
                     {isTeacher ? 'Student View' : 'Teacher View'}
                   </button>
                 )}
-                
+
+                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} />
+
                 <div className="flex items-center gap-2.5 pl-2 border-l border-[#c9993f]/20">
                   <div className="hidden sm:block text-right">
                     <p className="text-sm font-semibold text-[#0d1b2a] leading-tight">
