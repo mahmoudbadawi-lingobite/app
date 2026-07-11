@@ -202,10 +202,29 @@ export interface PeerReview {
   id: string;
   submissionId: string;
   reviewerId: string;
-  reviewerName: string;       // Anonymous display name
+  reviewerName: string;       // The reviewer's registered display name
+  reviewerPhotoURL?: string | null; // The reviewer's registered profile picture
   createdAt: Date;
   emojiReactions: EmojiReaction[];
   writtenComment?: string;
+}
+
+// --- In-App Notifications ---
+
+export type NotificationType = 'peer_comment';
+
+export interface AppNotification {
+  id: string;
+  recipientId: string;        // uid of the user who should see this notification
+  type: NotificationType;
+  submissionId: string;
+  lessonTitle: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserPhotoURL?: string | null;
+  commentPreview: string;
+  read: boolean;
+  createdAt: Date;
 }
 
 export interface EmojiReaction {
