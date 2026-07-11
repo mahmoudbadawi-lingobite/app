@@ -184,6 +184,42 @@ export const getPendingSubmissions = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+// Removes a submission along with any peer reviews and notifications that
+// reference it, so a teacher deleting a submission doesn't leave orphaned
+// comments/notifications behind. Firestore batches cap at 500 writes, so
+// large fan-out (many peer reviews on one submission) is chunked defensively.
+const deleteSubmissionCascade = async (submissionId: string, batch: ReturnType<typeof writeBatch>) => {
+  batch.delete(doc(db, 'student_submissions', submissionId));
+
+  const reviewsSnap = await getDocs(
+    query(collection(db, 'peer_reviews'), where('submissionId', '==', submissionId))
+  );
+  reviewsSnap.docs.forEach(d => batch.delete(d.ref));
+
+  const notificationsSnap = await getDocs(
+    query(collection(db, 'notifications'), where('submissionId', '==', submissionId))
+  );
+  notificationsSnap.docs.forEach(d => batch.delete(d.ref));
+};
+
+export const deleteSubmission = async (submissionId: string) => {
+  const batch = writeBatch(db);
+  await deleteSubmissionCascade(submissionId, batch);
+  await batch.commit();
+};
+
+// Bulk-delete for the teacher dashboard's "select multiple" flow. Each
+// submission (plus its related docs) is written to its own batch so a
+// single submission with an unusually large number of peer reviews can't
+// blow through Firestore's 500-writes-per-batch limit.
+export const deleteSubmissions = async (submissionIds: string[]) => {
+  for (const submissionId of submissionIds) {
+    const batch = writeBatch(db);
+    await deleteSubmissionCascade(submissionId, batch);
+    await batch.commit();
+  }
+};
+
 // Teacher-reviewed work from any student, used to power the peer-feedback
 // browser. Submissions only become visible to classmates once the teacher
 // has graded them — a freshly submitted (but not yet graded) submission is
