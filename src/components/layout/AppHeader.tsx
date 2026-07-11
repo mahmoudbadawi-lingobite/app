@@ -3,19 +3,20 @@
 // ============================================================
 
 import React from 'react';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useAuth } from '@/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
 import { avatarFallback } from '@/lib/utils';
-import NotificationBell from '@/components/notifications/NotificationBell';
+import NotificationBell from '@/NotificationBell';
 
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
   onBack?: () => void;
   onNavigateToPeerFeedback?: () => void;
+  onNavigateToProgress?: () => void;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback, onNavigateToProgress }) => {
   const { user, isTeacher, switchRole, openAvatarPicker } = useAuth();
 
   return (
@@ -85,7 +86,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigate
                   </button>
                 )}
 
-                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} />
+                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} onNavigateToProgress={onNavigateToProgress} />
 
                 <div className="flex items-center gap-2.5 pl-2 border-l border-[#c9993f]/20">
                   <div className="hidden sm:block text-right">
