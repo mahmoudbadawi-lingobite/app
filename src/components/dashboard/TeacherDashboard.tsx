@@ -18,14 +18,16 @@ import {
 import type { StudentSubmission, Lesson } from '@/types';
 import {
   getPendingSubmissions, updateSubmission, fmtTimestamp,
-  getLessons, db, deleteSubmission, deleteSubmissions
+  getLessons, db, deleteSubmission, deleteSubmissions, createNotification
 } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { avatarFallback } from '@/lib/utils';
+import { useAuth } from '@/AuthProvider';
 
 type Tab = 'submissions' | 'lessons';
 
 const TeacherDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('submissions');
 
   // --- Submissions state ---
@@ -109,6 +111,26 @@ const TeacherDashboard: React.FC = () => {
             : sub
         )
       );
+
+      // Let the student know their work has been graded, and by whom.
+      if (selectedSubmission && user) {
+        try {
+          await createNotification({
+            recipientId: selectedSubmission.studentId,
+            type: 'submission_graded',
+            submissionId,
+            lessonTitle: selectedSubmission.lessonTitle,
+            fromUserId: user.uid,
+            fromUserName: user.displayName || 'Your teacher',
+            fromUserPhotoURL: user.customAvatarUrl || user.photoURL || null,
+            commentPreview: data.teacherWrittenFeedback?.slice(0, 140) || '',
+          });
+        } catch (notifyErr) {
+          // A failed notification shouldn't block the grade itself.
+          console.error('Failed to notify student of grade:', notifyErr);
+        }
+      }
+
       setSelectedSubmission(null);
     } catch (err) {
       console.error('Failed to save grade:', err);
