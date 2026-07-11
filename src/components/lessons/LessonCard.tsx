@@ -74,14 +74,14 @@ const LessonCard: React.FC<Props> = ({ lesson, onClick, progress = 0 }) => {
 
         {/* Meta Info */}
         <div className="flex items-center gap-3 text-xs text-[#0d1b2a]/40 mb-4">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 shrink-0">
             <BookOpen className="w-3.5 h-3.5" /> {itemCount} items
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 shrink-0">
             <Clock className="w-3.5 h-3.5" /> ~{itemCount * 3} min
           </span>
-          <span className="flex items-center gap-1">
-            <BarChart3 className="w-3.5 h-3.5" /> {lesson.teacherName}
+          <span className="flex items-center gap-1 min-w-0">
+            <BarChart3 className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{lesson.teacherName}</span>
           </span>
         </div>
 

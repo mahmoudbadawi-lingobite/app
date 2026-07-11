@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { Lesson, PronunciationItem, StudentSubmission } from '@/types';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { updateSubmission, createNotification } from '@/lib/firebase';
 
 interface Props {
   lesson: Lesson;
@@ -40,6 +41,8 @@ const PronunciationModule: React.FC<Props> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [completedItems, setCompletedItems] = useState<Set<number>>(new Set());
   const [showPeerReview, setShowPeerReview] = useState(false);
+  const [gradeSaved, setGradeSaved] = useState(false);
+  const [gradeSaveError, setGradeSaveError] = useState(false);
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
 studentName: user?.displayName || '',
@@ -117,6 +120,48 @@ status: 'in_progress',
       status: 'submitted',
       submittedAt: new Date(),
     });
+  };
+
+  const handleGradeSubmit = async (data: {
+    totalScore: number;
+    teacherWrittenFeedback: string;
+    teacherAudioFeedbackUrl?: string;
+    competenceFlags: string[];
+    flawFlags: string[];
+    answers: StudentSubmission['answers'];
+  }) => {
+    if (!existingSubmission) return;
+    setGradeSaveError(false);
+    try {
+      await updateSubmission(existingSubmission.id, {
+        ...data,
+        status: 'graded',
+        gradedAt: new Date(),
+      });
+
+      if (user) {
+        try {
+          await createNotification({
+            recipientId: existingSubmission.studentId,
+            type: 'submission_graded',
+            submissionId: existingSubmission.id,
+            lessonTitle: existingSubmission.lessonTitle,
+            fromUserId: user.uid,
+            fromUserName: user.displayName || 'Your teacher',
+            fromUserPhotoURL: user.customAvatarUrl || user.photoURL || null,
+            commentPreview: data.teacherWrittenFeedback?.slice(0, 140) || '',
+          });
+        } catch (notifyErr) {
+          // A failed notification shouldn't block the grade itself.
+          console.error('Failed to notify student of grade:', notifyErr);
+        }
+      }
+
+      setGradeSaved(true);
+    } catch (err) {
+      console.error('Failed to save grade:', err);
+      setGradeSaveError(true);
+    }
   };
 
   const playNativeAudio = (index: number) => {
@@ -378,7 +423,20 @@ status: 'in_progress',
         {/* Teacher Grading Card (visible in teacher view) */}
         {teacherView && existingSubmission && (
           <div className="mt-8">
-            <TeacherGradeCard submission={existingSubmission} onGrade={(data) => console.log('Graded:', data)} />
+            {gradeSaved ? (
+              <div className="text-center text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg py-3 px-4">
+                Grade saved and the student has been notified.
+              </div>
+            ) : (
+              <>
+                {gradeSaveError && (
+                  <div className="text-center text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg py-2 px-4 mb-3">
+                    Something went wrong saving the grade. Please try again.
+                  </div>
+                )}
+                <TeacherGradeCard submission={existingSubmission} onGrade={handleGradeSubmit} />
+              </>
+            )}
           </div>
         )}
       </div>
