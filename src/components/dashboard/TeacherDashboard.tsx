@@ -12,12 +12,13 @@ import LessonCreator from './LessonCreator';
 import {
   Inbox, CheckCircle, Clock, Search,
   Users, GraduationCap, Loader2,
-  Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target
+  Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target,
+  Square, CheckSquare, X
 } from 'lucide-react';
 import type { StudentSubmission, Lesson } from '@/types';
 import {
   getPendingSubmissions, updateSubmission, fmtTimestamp,
-  getLessons, db
+  getLessons, db, deleteSubmission, deleteSubmissions
 } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { avatarFallback } from '@/lib/utils';
@@ -33,6 +34,9 @@ const TeacherDashboard: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'graded'>('all');
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<StudentSubmission | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingSubmissionId, setDeletingSubmissionId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // --- Lessons state ---
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -123,6 +127,60 @@ const TeacherDashboard: React.FC = () => {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!confirm('Delete this submission? This also removes its peer comments and notifications. This cannot be undone.')) return;
+    setDeletingSubmissionId(submissionId);
+    try {
+      await deleteSubmission(submissionId);
+      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(submissionId);
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to delete submission:', err);
+      alert('Failed to delete submission. Please try again.');
+    } finally {
+      setDeletingSubmissionId(null);
+    }
+  };
+
+  const handleBulkDeleteSubmissions = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} submission${ids.length === 1 ? '' : 's'}? This also removes their peer comments and notifications. This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await deleteSubmissions(ids);
+      setSubmissions(prev => prev.filter(s => !selectedIds.has(s.id)));
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('Failed to delete submissions:', err);
+      alert('Some submissions may not have been deleted. Please refresh and try again.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleSelected = (submissionId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(submissionId)) next.delete(submissionId);
+      else next.add(submissionId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedIds(prev => {
+      const allSelected = filteredSubmissions.length > 0 &&
+        filteredSubmissions.every(s => prev.has(s.id));
+      if (allSelected) return new Set();
+      return new Set(filteredSubmissions.map(s => s.id));
+    });
   };
 
   const handleLessonSaved = async () => {
@@ -242,7 +300,7 @@ const TeacherDashboard: React.FC = () => {
         {/* Submissions Tab */}
         {activeTab === 'submissions' && (
           <div>
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d1b2a]/30" />
                 <Input
@@ -269,6 +327,43 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </div>
 
+            {!loadingSubmissions && filteredSubmissions.length > 0 && (
+              <div className="flex items-center justify-between mb-4 px-1">
+                <button
+                  onClick={toggleSelectAllFiltered}
+                  className="flex items-center gap-2 text-sm font-medium text-[#0d1b2a]/60 hover:text-[#0d1b2a] transition-colors"
+                >
+                  {filteredSubmissions.every(s => selectedIds.has(s.id))
+                    ? <CheckSquare className="w-4 h-4 text-[#c9993f]" />
+                    : <Square className="w-4 h-4" />
+                  }
+                  {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
+                </button>
+
+                {selectedIds.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      className="flex items-center gap-1 text-xs font-medium text-[#0d1b2a]/40 hover:text-[#0d1b2a] px-2 py-1.5 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" /> Clear
+                    </button>
+                    <button
+                      onClick={handleBulkDeleteSubmissions}
+                      disabled={bulkDeleting}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                    >
+                      {bulkDeleting
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Trash2 className="w-3.5 h-3.5" />
+                      }
+                      Delete {selectedIds.size} selected
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {loadingSubmissions ? (
               <div className="flex items-center justify-center py-20 gap-3 text-[#0d1b2a]/40">
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -280,10 +375,22 @@ const TeacherDashboard: React.FC = () => {
                   <Card
                     key={sub.id}
                     onClick={() => setSelectedSubmission(sub)}
-                    className="lb-card p-5 cursor-pointer hover:shadow-lg transition-all"
+                    className={`lb-card p-5 cursor-pointer hover:shadow-lg transition-all ${
+                      selectedIds.has(sub.id) ? 'ring-2 ring-[#c9993f]' : ''
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleSelected(sub.id); }}
+                          className="flex-shrink-0 text-[#0d1b2a]/30 hover:text-[#c9993f] transition-colors"
+                          title="Select submission"
+                        >
+                          {selectedIds.has(sub.id)
+                            ? <CheckSquare className="w-5 h-5 text-[#c9993f]" />
+                            : <Square className="w-5 h-5" />
+                          }
+                        </button>
                         <img
                           src={sub.studentPhotoURL || avatarFallback(40)}
                           alt={sub.studentName}
@@ -297,19 +404,32 @@ const TeacherDashboard: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge className={sub.status === 'graded' ? 'lb-badge-reviewed' : 'bg-blue-50 text-blue-700 border-blue-200'}>
-                          {sub.status === 'graded'
-                            ? <><CheckCircle className="w-3 h-3 mr-1" /> Graded</>
-                            : <><Clock className="w-3 h-3 mr-1" /> Pending</>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <Badge className={sub.status === 'graded' ? 'lb-badge-reviewed' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+                            {sub.status === 'graded'
+                              ? <><CheckCircle className="w-3 h-3 mr-1" /> Graded</>
+                              : <><Clock className="w-3 h-3 mr-1" /> Pending</>
+                            }
+                          </Badge>
+                          {sub.totalScore !== undefined && (
+                            <p className="text-sm text-[#c9993f] font-bold mt-1">{sub.totalScore} / {sub.maxScore}</p>
+                          )}
+                          {sub.submittedAt && (
+                            <p className="text-xs text-[#0d1b2a]/40 mt-0.5">{fmtTimestamp(sub.submittedAt)}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSubmission(sub.id); }}
+                          disabled={deletingSubmissionId === sub.id}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-[#0d1b2a]/40 hover:text-red-500 transition-colors disabled:opacity-40 flex-shrink-0"
+                          title="Delete submission"
+                        >
+                          {deletingSubmissionId === sub.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Trash2 className="w-4 h-4" />
                           }
-                        </Badge>
-                        {sub.totalScore !== undefined && (
-                          <p className="text-sm text-[#c9993f] font-bold mt-1">{sub.totalScore} / {sub.maxScore}</p>
-                        )}
-                        {sub.submittedAt && (
-                          <p className="text-xs text-[#0d1b2a]/40 mt-0.5">{fmtTimestamp(sub.submittedAt)}</p>
-                        )}
+                        </button>
                       </div>
                     </div>
                   </Card>
