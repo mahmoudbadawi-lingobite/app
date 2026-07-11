@@ -15,6 +15,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { getSubmissionsForPeerFeedback, fmtTimestamp } from '@/lib/firebase';
 import { avatarFallback } from '@/lib/utils';
 import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
+import SubmissionContentViewer from '@/components/peer/SubmissionContentViewer';
 import type { StudentSubmission, LessonType } from '@/types';
 
 const TYPE_META: Record<LessonType, { label: string; icon: React.ElementType; badgeBg: string }> = {
@@ -98,6 +99,8 @@ const PeerFeedbackBrowser: React.FC = () => {
               )}
             </div>
           </Card>
+
+          <SubmissionContentViewer submission={selected} />
 
           <PeerReviewPanel
             submissionId={selected.id}
