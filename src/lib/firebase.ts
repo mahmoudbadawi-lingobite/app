@@ -184,14 +184,16 @@ export const getPendingSubmissions = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
-// Submitted/graded work from any student, used to power the peer-feedback
-// browser. Filtering out the signed-in student's own submissions happens
-// client-side to avoid needing an extra composite index for an inequality
-// filter.
+// Teacher-reviewed work from any student, used to power the peer-feedback
+// browser. Submissions only become visible to classmates once the teacher
+// has graded them — a freshly submitted (but not yet graded) submission is
+// still private to the student and their teacher. Filtering out the
+// signed-in student's own submissions happens client-side to avoid needing
+// an extra composite index for an inequality filter.
 export const getSubmissionsForPeerFeedback = async () => {
   const q = query(
     collection(db, 'student_submissions'),
-    where('status', 'in', ['submitted', 'graded']),
+    where('status', '==', 'graded'),
     orderBy('submittedAt', 'desc')
   );
   const snap = await getDocs(q);
@@ -233,6 +235,57 @@ export const getPeerReviewsByReviewer = async (reviewerId: string) => {
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// --- Notifications ---
+// Fired whenever a student leaves a peer review comment, so the owner of
+// the reviewed submission finds out someone commented on their work.
+export const createNotification = async (data: Omit<DocumentData, 'id'>) => {
+  return await addDoc(collection(db, 'notifications'), {
+    ...(stripUndefinedDeep(data) as DocumentData),
+    read: false,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const getNotificationsForUser = async (userId: string) => {
+  const q = query(
+    collection(db, 'notifications'),
+    where('recipientId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// Live-updating version so the header bell can reflect new notifications
+// (and their read/unread state) without a manual refresh.
+export const subscribeToNotifications = (
+  userId: string,
+  callback: (docs: QuerySnapshot<DocumentData>) => void
+) => {
+  const q = query(
+    collection(db, 'notifications'),
+    where('recipientId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, callback);
+};
+
+export const markNotificationRead = async (notificationId: string) => {
+  await updateDoc(doc(db, 'notifications', notificationId), { read: true });
+};
+
+export const markAllNotificationsRead = async (userId: string) => {
+  const q = query(
+    collection(db, 'notifications'),
+    where('recipientId', '==', userId),
+    where('read', '==', false)
+  );
+  const snap = await getDocs(q);
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+  await batch.commit();
 };
 
 // --- Badges ---
