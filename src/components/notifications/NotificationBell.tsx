@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, MessageCircle, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAuth } from '@/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import {
   subscribeToNotifications, markNotificationRead, markAllNotificationsRead,
   fmtTimestamp,
