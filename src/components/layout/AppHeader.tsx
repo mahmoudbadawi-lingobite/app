@@ -40,7 +40,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigate
               <img
                 src={logoImg}
                 alt="LingoBite logo"
-                className="w-9 h-9 rounded-xl object-cover shrink-0"
+                className="h-12 w-12 object-contain shrink-0"
               />
               <span className="font-serif text-xl font-bold text-[#0d1b2a] hidden sm:block">
                 Lingo<span className="text-[#c9993f]">Bite</span>
