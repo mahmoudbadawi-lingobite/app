@@ -18,8 +18,8 @@ import type {
   Lesson, VocabularyFillInItem, VocabularyImageItem,
   VocabularyMCQItem, StudentSubmission, StudentAnnotation
 } from '@/types';
-import { useAuth } from '@/components/auth/AuthProvider';
-import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
+import { useAuth } from '@/AuthProvider';
+import PeerReviewPanel from '@/PeerReviewPanel';
 
 type VocabItem = VocabularyFillInItem | VocabularyImageItem | VocabularyMCQItem;
 
@@ -520,8 +520,8 @@ const ImageAnnotationSection: React.FC<{
         style={{ aspectRatio: '16/10' }}
       >
         <img
-          src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=750&fit=crop"
-          alt="Business email diagram"
+          src={item.imageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=750&fit=crop'}
+          alt="Annotation source"
           className="w-full h-full object-cover opacity-80"
         />
 
