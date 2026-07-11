@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { getLessonById } from '@/lib/firebase';
+import AnnotationImageViewer from '@/components/lessons/AnnotationImageViewer';
 import type { Lesson, StudentSubmission, StudentAnswer } from '@/types';
 import { CheckCircle, XCircle, Mic, BookOpen, Loader2, Volume2 } from 'lucide-react';
 
@@ -129,23 +130,10 @@ const SubmissionContentViewer: React.FC<Props> = ({ submission }) => {
               {/* VOCAB IMAGE ANNOTATION */}
               {item.type === 'vocab_image' && (
                 <>
-                  <div className="relative rounded-xl overflow-hidden bg-[#0d1b2a]" style={{ maxHeight: 420 }}>
-                    <img
-                      src={item.imageUrl}
-                      alt="Annotation source"
-                      className="w-full h-full object-contain"
-                    />
-                    {(answer as any)?.annotations?.map((ann: any, i: number) => (
-                      <div
-                        key={ann.id}
-                        className="absolute w-7 h-7 rounded-full bg-[#0d1b2a] text-[#c9993f] border-2 border-white shadow-lg flex items-center justify-center text-xs font-bold -translate-x-1/2 -translate-y-1/2"
-                        style={{ left: `${ann.x}%`, top: `${ann.y}%` }}
-                        title={ann.label}
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
+                  <AnnotationImageViewer
+                    imageUrl={item.imageUrl}
+                    studentMarkers={(answer as any)?.annotations}
+                  />
                   {(answer as any)?.annotations?.length ? (
                     <div className="flex flex-wrap gap-2">
                       {(answer as any).annotations.map((ann: any, i: number) => (
