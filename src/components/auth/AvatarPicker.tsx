@@ -60,7 +60,7 @@ const AvatarPicker: React.FC<Props> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-5 gap-3 py-2">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 py-2">
           {AVATAR_OPTIONS.map((avatar) => {
             const isSelected = currentAvatarUrl === avatar.url;
             const isSaving = saving === avatar.url;
