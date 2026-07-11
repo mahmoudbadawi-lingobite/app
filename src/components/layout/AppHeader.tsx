@@ -5,9 +5,10 @@
 import React from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Shield, GraduationCap, ChevronLeft } from 'lucide-react';
+import { Shield, GraduationCap, ChevronLeft } from 'lucide-react';
 import { avatarFallback } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import logoImg from '@/assets/logo.png';
 
 interface AppHeaderProps {
   currentLesson?: { title: string; progress: number } | null;
@@ -36,9 +37,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigate
               </Button>
             ) : null}
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#0d1b2a] flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-[#c9993f]" />
-              </div>
+              <img
+                src={logoImg}
+                alt="LingoBite logo"
+                className="w-9 h-9 rounded-xl object-cover shrink-0"
+              />
               <span className="font-serif text-xl font-bold text-[#0d1b2a] hidden sm:block">
                 Lingo<span className="text-[#c9993f]">Bite</span>
               </span>
