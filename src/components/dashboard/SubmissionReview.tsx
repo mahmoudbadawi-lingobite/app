@@ -178,6 +178,53 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
                 </>
               )}
 
+              {/* VOCAB IMAGE ANNOTATION */}
+              {item.type === 'vocab_image' && (
+                <>
+                  <p className="font-medium text-[#0d1b2a] mb-2">{item.instructions}</p>
+                  <div className="relative rounded-xl overflow-hidden bg-[#0d1b2a]" style={{ maxHeight: 420 }}>
+                    <img
+                      src={item.imageUrl}
+                      alt="Annotation source"
+                      className="w-full h-full object-contain"
+                    />
+                    {/* Correct answer markers */}
+                    {item.annotations?.map((ann: any) => (
+                      <div
+                        key={ann.id}
+                        className="absolute w-6 h-6 rounded-full bg-[#38a169] border-2 border-white shadow-md flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${ann.x}%`, top: `${ann.y}%` }}
+                        title={ann.label}
+                      >
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                    ))}
+                    {/* Student's placed markers */}
+                    {(answer as any)?.annotations?.map((ann: any, i: number) => (
+                      <div
+                        key={ann.id}
+                        className="absolute w-7 h-7 rounded-full bg-[#0d1b2a] text-[#c9993f] border-2 border-white shadow-lg flex items-center justify-center text-xs font-bold -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${ann.x}%`, top: `${ann.y}%` }}
+                        title={ann.label}
+                      >
+                        {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                  {(answer as any)?.annotations?.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {(answer as any).annotations.map((ann: any, i: number) => (
+                        <span key={ann.id} className="text-xs px-2 py-1 rounded-lg bg-[#faf6ef] border border-[#e5ddd0] text-[#0d1b2a]/70">
+                          {i + 1}. {ann.label || '(unlabeled)'}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#0d1b2a]/40 italic">No annotations placed.</p>
+                  )}
+                </>
+              )}
+
               {/* GRAMMAR SENTENCE */}
               {item.type === 'grammar_sentence' && (
                 <>
