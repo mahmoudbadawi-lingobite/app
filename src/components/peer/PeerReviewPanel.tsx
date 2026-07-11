@@ -9,17 +9,21 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ThumbsUp, Star, Flame, Heart, Lightbulb,
-  Send, MessageCircle, User, Clock, Loader2
+  Send, MessageCircle, Clock, Loader2
 } from 'lucide-react';
 import type { PeerReview } from '@/types';
 import {
   fmtTimestamp, getPeerReviewsForSubmission,
-  addPeerReview, updatePeerReviewReactions,
+  addPeerReview, updatePeerReviewReactions, createNotification,
 } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { avatarFallback } from '@/lib/utils';
 
 interface Props {
   submissionId: string;
+  // Needed so a comment can notify the classmate whose work is being reviewed.
+  submissionOwnerId: string;
+  lessonTitle: string;
 }
 
 const EMOJI_OPTIONS = [
@@ -31,16 +35,7 @@ const EMOJI_OPTIONS = [
   { emoji: '💡', icon: Lightbulb, label: 'Insightful' },
 ];
 
-const generateAnonymousName = () => {
-  const adjectives = ['Creative', 'Bright', 'Curious', 'Eager', 'Happy', 'Witty', 'Brave', 'Calm'];
-  const animals = ['Panda', 'Tiger', 'Eagle', 'Dolphin', 'Owl', 'Fox', 'Wolf', 'Bear'];
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const animal = animals[Math.floor(Math.random() * animals.length)];
-  const suffix = Math.floor(Math.random() * 99);
-  return `${adjective}${animal}_${suffix}`;
-};
-
-const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
+const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonTitle }) => {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<PeerReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,16 +93,39 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
     if (!comment.trim() || !user || posting) return;
     setPosting(true);
     setError(null);
+    const trimmedComment = comment.trim();
+    const reviewerPhotoURL = user.customAvatarUrl || user.photoURL || null;
     try {
       await addPeerReview({
         submissionId,
         reviewerId: user.uid,
-        reviewerName: generateAnonymousName(),
+        reviewerName: user.displayName || 'A classmate',
+        reviewerPhotoURL,
         emojiReactions: [],
-        writtenComment: comment.trim(),
+        writtenComment: trimmedComment,
       });
       setComment('');
       await loadReviews();
+
+      // Let the submission's owner know someone commented on their work.
+      // Skip self-notifications if a student somehow reviews their own work.
+      if (submissionOwnerId && submissionOwnerId !== user.uid) {
+        try {
+          await createNotification({
+            recipientId: submissionOwnerId,
+            type: 'peer_comment',
+            submissionId,
+            lessonTitle,
+            fromUserId: user.uid,
+            fromUserName: user.displayName || 'A classmate',
+            fromUserPhotoURL: reviewerPhotoURL,
+            commentPreview: trimmedComment.slice(0, 140),
+          });
+        } catch (notifyErr) {
+          // A failed notification shouldn't block the comment itself.
+          console.error('Failed to notify submission owner:', notifyErr);
+        }
+      }
     } catch (err) {
       console.error('Failed to post peer review:', err);
       setError('Could not post your comment. Please try again.');
@@ -172,9 +190,11 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId }) => {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#0d1b2a]/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-[#0d1b2a]/50" />
-                  </div>
+                  <img
+                    src={review.reviewerPhotoURL || avatarFallback(32)}
+                    alt={review.reviewerName}
+                    className="w-8 h-8 rounded-full border border-[#c9993f]/20 object-cover"
+                  />
                   <div>
                     <p className="text-sm font-semibold text-[#0d1b2a]">{review.reviewerName}</p>
                     <p className="text-xs text-[#0d1b2a]/40 flex items-center gap-1">

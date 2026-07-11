@@ -99,7 +99,11 @@ const PeerFeedbackBrowser: React.FC = () => {
             </div>
           </Card>
 
-          <PeerReviewPanel submissionId={selected.id} />
+          <PeerReviewPanel
+            submissionId={selected.id}
+            submissionOwnerId={selected.studentId}
+            lessonTitle={selected.lessonTitle}
+          />
         </div>
       </div>
     );
@@ -152,7 +156,7 @@ const PeerFeedbackBrowser: React.FC = () => {
             <Users className="w-12 h-12 text-[#0d1b2a]/20 mx-auto mb-3" />
             <p className="text-[#0d1b2a]/50 font-medium mb-1">Nothing to review yet</p>
             <p className="text-sm text-[#0d1b2a]/30">
-              Once classmates submit lessons, they'll show up here for feedback.
+              Once a teacher reviews a classmate's submission, it'll show up here for feedback.
             </p>
           </Card>
         ) : (
