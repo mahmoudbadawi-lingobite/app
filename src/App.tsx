@@ -13,14 +13,13 @@ import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
 import StudentProgress from '@/components/progress/StudentProgress';
 import PeerFeedbackBrowser from '@/components/peer/PeerFeedbackBrowser';
-import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer } from '@/lib/firebase';
+import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer, getLessons } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
-  Sparkles, TrendingUp, Users, Zap, BarChart3
+  Sparkles, TrendingUp, Users, Zap, BarChart3, Loader2
 } from 'lucide-react';
-import { ALL_LESSONS } from '@/lib/mockData';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
@@ -37,6 +36,12 @@ const AppContent: React.FC = () => {
   // data used to derive lesson progress badges and home stats.
   const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
   const [peerReviewsGiven, setPeerReviewsGiven] = useState(0);
+
+  // Published lessons, fetched from Firestore. Previously this screen
+  // rendered a hardcoded mock lesson list, so anything a teacher created
+  // and published never actually showed up for students.
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(true);
 
   const isHome = currentView === 'home';
   useEffect(() => {
@@ -66,9 +71,29 @@ const AppContent: React.FC = () => {
     // shows up immediately (e.g. after handleLessonComplete navigates back).
   }, [user, isHome]);
 
-  const pronLessons = ALL_LESSONS.filter(l => l.type === 'pronunciation');
-  const vocabLessons = ALL_LESSONS.filter(l => l.type === 'vocabulary');
-  const grammarLessons = ALL_LESSONS.filter(l => l.type === 'grammar');
+  // Fetch published lessons whenever we land on Home, so a lesson a
+  // teacher just published (possibly in another tab/session) shows up
+  // without requiring a full page reload.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isHome) return;
+    (async () => {
+      setLoadingLessons(true);
+      try {
+        const data = await getLessons();
+        if (!cancelled) setLessons(data as Lesson[]);
+      } catch (err) {
+        console.error('Failed to load lessons:', err);
+      } finally {
+        if (!cancelled) setLoadingLessons(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isHome]);
+
+  const pronLessons = lessons.filter(l => l.type === 'pronunciation');
+  const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
+  const grammarLessons = lessons.filter(l => l.type === 'grammar');
 
   const handleLessonClick = (lesson: Lesson) => {
     setActiveLesson(lesson);
@@ -205,7 +230,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         {/* Stats Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
-            { label: 'Lessons Available', value: ALL_LESSONS.length, icon: BookOpen, color: 'text-[#c9993f]' },
+            { label: 'Lessons Available', value: lessons.length, icon: BookOpen, color: 'text-[#c9993f]' },
             { label: 'Completed', value: studentSubmissions.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
             { label: 'Peer Reviews', value: peerReviewsGiven, icon: Users, color: 'text-[#8b5cf6]' },
             { label: 'Current Streak', value: `${user?.currentStreak || 0} days`, icon: Zap, color: 'text-orange-500' },
@@ -254,55 +279,103 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {ALL_LESSONS.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : lessons.length === 0 ? (
+              <div className="text-center py-16">
+                <BookOpen className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {lessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="pronunciation" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {pronLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : pronLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <Mic className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No pronunciation lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {pronLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="vocabulary" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {vocabLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : vocabLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <BookMarked className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No vocabulary lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {vocabLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="grammar" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {grammarLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : grammarLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <Target className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No grammar lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {grammarLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
