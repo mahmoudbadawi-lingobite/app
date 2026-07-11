@@ -2,14 +2,15 @@
 // LingoBite - Lesson Card Component
 // ============================================================
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Mic, BookOpen, Target, Clock, BarChart3, ArrowRight,
-  CheckCircle, Play
+  CheckCircle, Play, Share2, Check
 } from 'lucide-react';
 import type { Lesson } from '@/types';
+import { buildLessonShareUrl, copyToClipboard } from '@/lib/utils';
 
 interface Props {
   lesson: Lesson;
@@ -43,6 +44,16 @@ const LessonCard: React.FC<Props> = ({ lesson, onClick, progress = 0 }) => {
   const Icon = config.icon;
   const itemCount = lesson.items.length;
   const hasProgress = progress > 0;
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ok = await copyToClipboard(buildLessonShareUrl(lesson.id));
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <Card
@@ -59,9 +70,23 @@ const LessonCard: React.FC<Props> = ({ lesson, onClick, progress = 0 }) => {
             <Icon className="w-3 h-3 mr-1" />
             {lesson.type}
           </Badge>
-          {hasProgress && progress === 100 && (
-            <CheckCircle className="w-5 h-5 text-[#38a169]" />
-          )}
+          <div className="flex items-center gap-2">
+            {hasProgress && progress === 100 && (
+              <CheckCircle className="w-5 h-5 text-[#38a169]" />
+            )}
+            <button
+              type="button"
+              onClick={handleShare}
+              title="Copy shareable lesson link"
+              className={`p-1.5 rounded-lg transition-colors ${
+                copied
+                  ? 'text-[#38a169] bg-[#38a169]/10'
+                  : 'text-[#0d1b2a]/30 hover:text-[#c9993f] hover:bg-[#c9993f]/10'
+              }`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         {/* Title & Description */}
