@@ -254,25 +254,25 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
           <TabsList className="bg-white border border-[#e5ddd0] rounded-xl p-1 h-auto w-full flex-wrap justify-start gap-1">
             <TabsTrigger
               value="all"
-              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+              className="flex-none rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
             >
               All Lessons
             </TabsTrigger>
             <TabsTrigger
               value="pronunciation"
-              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+              className="flex-none rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
             >
               <Mic className="w-3.5 h-3.5 mr-1.5" /> Pronunciation
             </TabsTrigger>
             <TabsTrigger
               value="vocabulary"
-              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+              className="flex-none rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
             >
               <BookMarked className="w-3.5 h-3.5 mr-1.5" /> Vocabulary
             </TabsTrigger>
             <TabsTrigger
               value="grammar"
-              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+              className="flex-none rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
             >
               <Target className="w-3.5 h-3.5 mr-1.5" /> Grammar
             </TabsTrigger>
