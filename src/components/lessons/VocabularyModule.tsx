@@ -106,7 +106,13 @@ status: 'in_progress',
   }, [annotationMode, imageAnnotations.length]);
 
   const handleNext = () => {
-    // Save current answer
+    // Save current answer. Computed into a local variable (not just via
+    // setSubmission) so the very last item's answer is guaranteed to be
+    // included when we submit in this same call — reading `submission`
+    // from the closure here would still hold the pre-update value, since
+    // the setSubmission above hasn't been applied/re-rendered yet.
+    let updatedAnswers = submission.answers || [];
+
     if (currentItem.type === 'vocab_fillin') {
       const fillItem = currentItem as VocabularyFillInItem;
       const studentAnswers = Object.values(answers[currentItem.id] || {}) as string[];
@@ -118,10 +124,8 @@ status: 'in_progress',
         answers: studentAnswers,
         isCorrect,
       };
-      setSubmission(prev => ({
-        ...prev,
-        answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), answerObj],
-      }));
+      updatedAnswers = [...updatedAnswers.filter((a: any) => a.itemId !== currentItem.id), answerObj];
+      setSubmission(prev => ({ ...prev, answers: updatedAnswers }));
     } else if (currentItem.type === 'vocab_mcq') {
       const mcqItem = currentItem as VocabularyMCQItem;
       const selectedIdx = answers[currentItem.id] as number;
@@ -132,10 +136,8 @@ status: 'in_progress',
         selectedOptionIndex: selectedIdx,
         isCorrect: selectedIdx === mcqItem.correctOptionIndex,
       };
-      setSubmission(prev => ({
-        ...prev,
-        answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), answerObj],
-      }));
+      updatedAnswers = [...updatedAnswers.filter((a: any) => a.itemId !== currentItem.id), answerObj];
+      setSubmission(prev => ({ ...prev, answers: updatedAnswers }));
     } else if (currentItem.type === 'vocab_image') {
       const answerObj = {
         itemId: currentItem.id,
@@ -143,23 +145,22 @@ status: 'in_progress',
         itemOrder: currentItem.order,
         annotations: imageAnnotations,
       };
-      setSubmission(prev => ({
-        ...prev,
-        answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), answerObj],
-      }));
+      updatedAnswers = [...updatedAnswers.filter((a: any) => a.itemId !== currentItem.id), answerObj];
+      setSubmission(prev => ({ ...prev, answers: updatedAnswers }));
     }
 
     if (isLastItem) {
-      handleSubmit();
+      handleSubmit(updatedAnswers);
     } else {
       setCurrentIndex(prev => prev + 1);
       setAnnotationMode(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (finalAnswers?: typeof submission.answers) => {
     onComplete({
       ...submission,
+      answers: finalAnswers ?? submission.answers,
       status: 'submitted',
       submittedAt: new Date(),
     });
@@ -226,22 +227,18 @@ status: 'in_progress',
         </div>
 
         {/* YouTube Video */}
-        <Card className="lb-card p-1 mb-6 overflow-hidden">
-          <div className="aspect-video bg-[#0d1b2a] rounded-[1rem] flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b2a] to-[#1a2d42]" />
-            <div className="relative z-10 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#38a169] flex items-center justify-center mx-auto mb-3">
-                <Lightbulb className="w-7 h-7 text-white" />
-              </div>
-              <p className="text-[#faf6ef]/80 text-sm font-medium">Vocabulary Instruction</p>
+        {lesson.youtubeUrl && (
+          <Card className="lb-card p-1 mb-6 overflow-hidden">
+            <div className="aspect-video rounded-[1rem] overflow-hidden">
+              <iframe
+                src={lesson.youtubeUrl.includes('embed') ? lesson.youtubeUrl : lesson.youtubeUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                className="w-full h-full"
+                allowFullScreen
+                title="Lesson video"
+              />
             </div>
-            <img
-              src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200&h=675&fit=crop"
-              alt="Vocabulary lesson"
-              className="absolute inset-0 w-full h-full object-cover opacity-30"
-            />
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Practice Card */}
         <Card className="lb-card p-6 sm:p-8 mb-6">
@@ -279,6 +276,7 @@ status: 'in_progress',
           {/* Image Annotation Type */}
           {currentItem.type === 'vocab_image' && (
             <ImageAnnotationSection
+              key={currentItem.id}
               item={currentItem as VocabularyImageItem}
               annotations={imageAnnotations}
               annotationMode={annotationMode}
@@ -482,6 +480,7 @@ const ImageAnnotationSection: React.FC<{
   onUpdateAnnotations: (a: StudentAnnotation[]) => void;
 }> = ({ item, annotations, annotationMode, imageRef, onToggleMode, onImageClick, onUpdateAnnotations }) => {
   const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number>(16 / 10);
 
   const updateLabel = (id: string, newLabel: string) => {
     onUpdateAnnotations(
@@ -514,15 +513,21 @@ const ImageAnnotationSection: React.FC<{
       <div
         ref={imageRef}
         onClick={onImageClick}
-        className={`relative rounded-xl overflow-hidden bg-[#0d1b2a] mb-4 ${
+        className={`relative rounded-xl overflow-hidden bg-[#0d1b2a] mb-4 mx-auto w-full ${
           annotationMode ? 'cursor-crosshair' : 'cursor-default'
         }`}
-        style={{ aspectRatio: '16/10' }}
+        style={{ aspectRatio: `${aspectRatio}`, maxHeight: '520px' }}
       >
         <img
           src={item.imageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=750&fit=crop'}
           alt="Annotation source"
-          className="w-full h-full object-cover opacity-80"
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth && img.naturalHeight) {
+              setAspectRatio(img.naturalWidth / img.naturalHeight);
+            }
+          }}
+          className="w-full h-full object-contain opacity-90"
         />
 
         {/* Correct annotations overlay (hint) */}

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
   CheckCircle, XCircle, ChevronRight, ChevronLeft, Upload,
-  Lightbulb, HelpCircle, Sparkles, Zap, RotateCcw, Wand2
+  Lightbulb, HelpCircle, Sparkles, RotateCcw, Wand2
 } from 'lucide-react';
 import type {
   Lesson, GrammarMCQItem, GrammarSentenceItem, StudentSubmission
@@ -96,7 +96,12 @@ studentName: user?.displayName || '',
   };
 
   const handleNext = () => {
-    // Save current answer
+    // Save current answer. Threaded through a local variable (not just
+    // setSubmission) so the last item's answer is guaranteed included when
+    // we submit in this same call — `submission` from the closure would
+    // still be the pre-update value at that point.
+    let updatedAnswers = submission.answers || [];
+
     if (currentItem.type === 'grammar_mcq') {
       const mcqItem = currentItem as GrammarMCQItem;
       const selectedIdx = answers[currentItem.id] as number;
@@ -107,10 +112,8 @@ studentName: user?.displayName || '',
         selectedOptionIndex: selectedIdx,
         isCorrect: selectedIdx === mcqItem.correctOptionIndex,
       };
-      setSubmission(prev => ({
-        ...prev,
-        answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), answerObj],
-      }));
+      updatedAnswers = [...updatedAnswers.filter((a: any) => a.itemId !== currentItem.id), answerObj];
+      setSubmission(prev => ({ ...prev, answers: updatedAnswers }));
     } else if (currentItem.type === 'grammar_sentence') {
       const ans = answers[currentItem.id] as { sentence: string; wordsUsed: string[] } | undefined;
       if (ans) {
@@ -121,15 +124,13 @@ studentName: user?.displayName || '',
           sentence: ans.sentence,
           wordsUsed: ans.wordsUsed,
         };
-        setSubmission(prev => ({
-          ...prev,
-          answers: [...(prev.answers || []).filter((a: any) => a.itemId !== currentItem.id), answerObj],
-        }));
+        updatedAnswers = [...updatedAnswers.filter((a: any) => a.itemId !== currentItem.id), answerObj];
+        setSubmission(prev => ({ ...prev, answers: updatedAnswers }));
       }
     }
 
     if (isLastItem) {
-      handleSubmit();
+      handleSubmit(updatedAnswers);
     } else {
       setCurrentIndex(prev => prev + 1);
       setSentenceWords([]);
@@ -138,9 +139,10 @@ studentName: user?.displayName || '',
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (finalAnswers?: typeof submission.answers) => {
     onComplete({
       ...submission,
+      answers: finalAnswers ?? submission.answers,
       status: 'submitted',
       submittedAt: new Date(),
     });
@@ -205,22 +207,18 @@ studentName: user?.displayName || '',
         </div>
 
         {/* YouTube Video */}
-        <Card className="lb-card p-1 mb-6 overflow-hidden">
-          <div className="aspect-video bg-[#0d1b2a] rounded-[1rem] flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0d1b2a] to-[#2d1a42]" />
-            <div className="relative z-10 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#8b5cf6] flex items-center justify-center mx-auto mb-3">
-                <Zap className="w-7 h-7 text-white" />
-              </div>
-              <p className="text-[#faf6ef]/80 text-sm font-medium">Grammar Instruction</p>
+        {lesson.youtubeUrl && (
+          <Card className="lb-card p-1 mb-6 overflow-hidden">
+            <div className="aspect-video rounded-[1rem] overflow-hidden">
+              <iframe
+                src={lesson.youtubeUrl.includes('embed') ? lesson.youtubeUrl : lesson.youtubeUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                className="w-full h-full"
+                allowFullScreen
+                title="Lesson video"
+              />
             </div>
-            <img
-              src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&h=675&fit=crop"
-              alt="Grammar lesson"
-              className="absolute inset-0 w-full h-full object-cover opacity-30"
-            />
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Practice Card */}
         <Card className="lb-card p-6 sm:p-8 mb-6">
