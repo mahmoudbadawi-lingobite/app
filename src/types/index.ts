@@ -211,7 +211,7 @@ export interface PeerReview {
 
 // --- In-App Notifications ---
 
-export type NotificationType = 'peer_comment';
+export type NotificationType = 'peer_comment' | 'submission_graded';
 
 export interface AppNotification {
   id: string;
