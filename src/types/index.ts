@@ -246,7 +246,7 @@ export interface Badge {
 }
 
 export interface BadgeCriteria {
-  type: 'score_threshold' | 'streak' | 'count' | 'peer_reviews' | 'perfect_score';
+  type: 'score_threshold' | 'streak' | 'count' | 'peer_reviews' | 'perfect_score' | 'perfect_count' | 'category_coverage';
   threshold: number;
   lessonType?: LessonType;
 }
