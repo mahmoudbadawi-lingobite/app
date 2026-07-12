@@ -204,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               open={showAvatarPicker}
               dismissable={!needsInitialAvatar}
               currentAvatarUrl={user?.customAvatarUrl}
+              allowUpload={user?.role === 'teacher'}
               onOpenChange={(open) => { if (!needsInitialAvatar) setAvatarPickerOpen(open); }}
               onSelect={setAvatar}
             />
