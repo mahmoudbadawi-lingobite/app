@@ -277,31 +277,34 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
                 Interactive pronunciation, vocabulary, and grammar lessons with personalized teacher feedback.
               </p>
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setCurrentView('badges')}
-                  className="lb-btn-gold flex items-center gap-2"
-                >
-                  <Trophy className="w-4 h-4" /> View Achievements
-                </button>
-                <button
-                  onClick={() => setCurrentView('progress')}
-                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
-                >
-                  <BarChart3 className="w-4 h-4" /> My Progress
-                </button>
-                <button
-                  onClick={() => setCurrentView('peer')}
-                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" /> Peer Feedback
-                </button>
-                {isTeacher && (
+                {isTeacher ? (
                   <button
                     onClick={() => setCurrentView('teacher')}
-                    className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    className="lb-btn-gold flex items-center gap-2"
                   >
                     <GraduationCap className="w-4 h-4" /> Teacher Dashboard
                   </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setCurrentView('badges')}
+                      className="lb-btn-gold flex items-center gap-2"
+                    >
+                      <Trophy className="w-4 h-4" /> View Achievements
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('progress')}
+                      className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    >
+                      <BarChart3 className="w-4 h-4" /> My Progress
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('peer')}
+                      className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" /> Peer Feedback
+                    </button>
+                  </>
                 )}
               </div>
             </div>
