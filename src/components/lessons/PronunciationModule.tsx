@@ -3,7 +3,7 @@
 // YouTube video + 10 progressive practice items + Web Audio API
 // ============================================================
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +62,7 @@ status: 'in_progress',
   const recorder = useAudioRecorder();
   const [playingAudio, setPlayingAudio] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nativeAudioRef = useRef<HTMLAudioElement | null>(null);
   const durationRef = useRef(0);
 
   const currentItem = items[currentIndex];
@@ -100,10 +101,28 @@ status: 'in_progress',
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (nativeAudioRef.current) {
+        nativeAudioRef.current.pause();
+        nativeAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopNativeAudio = () => {
+    if (nativeAudioRef.current) {
+      nativeAudioRef.current.pause();
+      nativeAudioRef.current = null;
+    }
+    setPlayingAudio(null);
+  };
+
   const handleNext = () => {
     if (currentIndex < items.length - 1) {
       setCurrentIndex(prev => prev + 1);
       recorder.resetRecording();
+      stopNativeAudio();
     }
   };
 
@@ -111,6 +130,7 @@ status: 'in_progress',
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
       recorder.resetRecording();
+      stopNativeAudio();
     }
   };
 
@@ -165,9 +185,33 @@ status: 'in_progress',
   };
 
   const playNativeAudio = (index: number) => {
-    // Mock: In production, play actual audio file
+    const item = items[index];
+    if (!item?.nativeAudioUrl) {
+      alert('No native audio was added for this item yet.');
+      return;
+    }
+
+    // Stop any audio already playing before starting the new one.
+    if (nativeAudioRef.current) {
+      nativeAudioRef.current.pause();
+      nativeAudioRef.current = null;
+    }
+
+    const audio = new Audio(item.nativeAudioUrl);
+    nativeAudioRef.current = audio;
     setPlayingAudio(index);
-    setTimeout(() => setPlayingAudio(null), 2000);
+
+    audio.addEventListener('ended', () => setPlayingAudio(null));
+    audio.addEventListener('error', () => {
+      console.error('Failed to play native audio:', item.nativeAudioUrl);
+      setPlayingAudio(null);
+      alert('This native audio could not be played. Please check the audio link for this item.');
+    });
+
+    audio.play().catch(err => {
+      console.error('Native audio playback failed:', err);
+      setPlayingAudio(null);
+    });
   };
 
   return (
@@ -196,7 +240,7 @@ status: 'in_progress',
           {items.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => { setCurrentIndex(idx); recorder.resetRecording(); }}
+              onClick={() => { setCurrentIndex(idx); recorder.resetRecording(); stopNativeAudio(); }}
               className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-200 ${
                 idx === currentIndex
                   ? 'bg-[#0d1b2a] text-[#c9993f] shadow-lg'
@@ -386,14 +430,13 @@ status: 'in_progress',
               <Upload className="w-4 h-4" /> Submit All
             </button>
           ) : (
-            <Button
-              variant="outline"
+            <button
               onClick={handleNext}
               disabled={currentIndex === items.length - 1}
-              className="lb-btn-primary"
+              className="lb-btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            </button>
           )}
         </div>
 
