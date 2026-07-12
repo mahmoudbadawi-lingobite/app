@@ -29,7 +29,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 
 const BadgeShowcase: React.FC = () => {
   const { user } = useAuth();
-  const earnedBadges = user?.badges || MOCK_STUDENT.badges;
+  const earnedBadges = user?.badges ?? MOCK_STUDENT.badges;
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const filteredBadges = filterCategory === 'all'
@@ -44,7 +44,7 @@ const BadgeShowcase: React.FC = () => {
     { label: 'Earned', value: earnedCount, icon: Trophy, color: 'text-[#c9993f]' },
     { label: 'Total', value: totalCount, icon: Star, color: 'text-[#0d1b2a]' },
     { label: 'Completion', value: `${completionPercent}%`, icon: TrendingUp, color: 'text-[#38a169]' },
-    { label: 'Current Streak', value: `${user?.currentStreak || MOCK_STUDENT.currentStreak} days`, icon: Flame, color: 'text-orange-500' },
+    { label: 'Current Streak', value: `${user?.currentStreak ?? MOCK_STUDENT.currentStreak} days`, icon: Flame, color: 'text-orange-500' },
   ];
 
   return (
