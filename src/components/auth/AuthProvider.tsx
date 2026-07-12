@@ -33,6 +33,7 @@ interface AuthContextType {
   switchRole: (role: UserRole) => Promise<void>;
   setAvatar: (avatarUrl: string) => Promise<void>;
   openAvatarPicker: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,6 +120,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const openAvatarPicker = () => setAvatarPickerOpen(true);
 
+  // Re-pulls the Firestore profile (badges, streak, scores...) without a
+  // full sign-in round-trip. Used after actions that can unlock a badge
+  // (finishing a lesson, leaving a peer review) so the UI reflects it.
+  const refreshUser = async () => {
+    if (!user) return;
+    try {
+      const profile = await getUserProfile(user.uid);
+      if (!profile) return;
+      setUser(prev => prev && ({
+        ...prev,
+        badges: profile.badges || [],
+        totalScore: profile.totalScore || 0,
+        lessonsCompleted: profile.lessonsCompleted || 0,
+        currentStreak: profile.currentStreak || 0,
+      }));
+    } catch (err) {
+      console.error('Failed to refresh user profile:', err);
+    }
+  };
+
   // First-time users (no avatar chosen yet) are prompted automatically and
   // can't dismiss the picker without choosing one. Existing users can reopen
   // it anytime via openAvatarPicker() (e.g. clicking their avatar).
@@ -137,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchRole,
         setAvatar,
         openAvatarPicker,
+        refreshUser,
       }}
     >
       {loading ? (
