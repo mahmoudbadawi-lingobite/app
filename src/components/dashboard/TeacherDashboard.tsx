@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import TeacherGradeCard from './TeacherGradeCard';
 import LessonCreator from './LessonCreator';
+import StudentsList from './StudentsList';
 import {
   Inbox, CheckCircle, Clock, Search,
   Users, GraduationCap, Loader2,
@@ -24,7 +25,7 @@ import {
 import { avatarFallback, buildLessonShareUrl, copyToClipboard } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
 
-type Tab = 'submissions' | 'lessons';
+type Tab = 'submissions' | 'students' | 'lessons';
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -354,7 +355,7 @@ const TeacherDashboard: React.FC = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {(['submissions', 'lessons'] as Tab[]).map(tab => (
+          {(['submissions', 'students', 'lessons'] as Tab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -364,7 +365,11 @@ const TeacherDashboard: React.FC = () => {
                   : 'bg-white text-[#0d1b2a]/60 border border-[#e5ddd0] hover:border-[#c9993f]'
               }`}
             >
-              {tab === 'submissions' ? `Submissions (${submissions.length})` : `Lessons (${lessons.length})`}
+              {tab === 'submissions'
+                ? `Submissions (${submissions.length})`
+                : tab === 'students'
+                ? 'Students'
+                : `Lessons (${lessons.length})`}
             </button>
           ))}
         </div>
@@ -516,6 +521,9 @@ const TeacherDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Students Tab */}
+        {activeTab === 'students' && <StudentsList />}
 
         {/* Lessons Tab */}
         {activeTab === 'lessons' && (
