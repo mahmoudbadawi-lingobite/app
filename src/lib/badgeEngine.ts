@@ -120,6 +120,14 @@ export const evaluateAndAwardBadges = async (
           : Object.values(byType).flatMap(t => t?.percentages || []);
         return percentages.some(p => p >= 100);
       }
+      case 'perfect_count': {
+        if (!criteria.lessonType) return false;
+        const percentages = byType[criteria.lessonType]?.percentages || [];
+        return percentages.filter(p => p >= 100).length >= criteria.threshold;
+      }
+      case 'category_coverage':
+        return (['pronunciation', 'vocabulary', 'grammar'] as LessonType[])
+          .every(t => (byType[t]?.count || 0) > 0);
       case 'score_threshold': {
         if (!criteria.lessonType) return false;
         const stat = byType[criteria.lessonType];
