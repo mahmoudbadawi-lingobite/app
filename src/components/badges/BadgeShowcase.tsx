@@ -7,10 +7,22 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Trophy, Lock, Star, Flame, Crown, Target,
-  TrendingUp, Zap, BookOpen, Mic, MessageCircle
+  TrendingUp, Zap, BookOpen, Mic, MessageCircle, ChevronLeft
 } from 'lucide-react';
 import { BADGES, MOCK_STUDENT } from '@/lib/mockData';
 import { useAuth } from '@/components/auth/AuthProvider';
+
+interface Props {
+  // When a teacher opens this from the Students list, these describe the
+  // student being viewed instead of the signed-in user.
+  student?: {
+    uid: string;
+    displayName: string | null;
+    badges: string[];
+    currentStreak: number;
+  };
+  onBack?: () => void;
+}
 
 const TIER_STYLES = {
   bronze: { bg: 'from-amber-700 to-amber-800', text: 'text-amber-700', border: 'border-amber-700/30', light: 'bg-amber-50' },
@@ -27,9 +39,10 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   milestone: Crown,
 };
 
-const BadgeShowcase: React.FC = () => {
+const BadgeShowcase: React.FC<Props> = ({ student, onBack }) => {
   const { user } = useAuth();
-  const earnedBadges = user?.badges ?? MOCK_STUDENT.badges;
+  const earnedBadges = student ? student.badges : (user?.badges ?? MOCK_STUDENT.badges);
+  const currentStreak = student ? student.currentStreak : (user?.currentStreak ?? MOCK_STUDENT.currentStreak);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const filteredBadges = filterCategory === 'all'
@@ -44,7 +57,7 @@ const BadgeShowcase: React.FC = () => {
     { label: 'Earned', value: earnedCount, icon: Trophy, color: 'text-[#c9993f]' },
     { label: 'Total', value: totalCount, icon: Star, color: 'text-[#0d1b2a]' },
     { label: 'Completion', value: `${completionPercent}%`, icon: TrendingUp, color: 'text-[#38a169]' },
-    { label: 'Current Streak', value: `${user?.currentStreak ?? MOCK_STUDENT.currentStreak} days`, icon: Flame, color: 'text-orange-500' },
+    { label: 'Current Streak', value: `${currentStreak} days`, icon: Flame, color: 'text-orange-500' },
   ];
 
   return (
@@ -52,12 +65,22 @@ const BadgeShowcase: React.FC = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="mb-8">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="lb-btn-outline flex items-center gap-2 mb-6"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back to Students
+            </button>
+          )}
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#c9993f] to-[#0d1b2a] flex items-center justify-center">
               <Trophy className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">Achievements</h1>
+              <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">
+                {student ? `${student.displayName || 'Student'}'s Achievements` : 'Achievements'}
+              </h1>
               <p className="text-sm text-[#0d1b2a]/50">Unlock badges by completing lessons and engaging</p>
             </div>
           </div>
