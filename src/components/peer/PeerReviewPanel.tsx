@@ -36,12 +36,13 @@ const EMOJI_OPTIONS = [
 ];
 
 const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonTitle }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [reviews, setReviews] = useState<PeerReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [badgeNotice, setBadgeNotice] = useState<string | null>(null);
 
   const loadReviews = async () => {
     try {
@@ -60,6 +61,23 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
     loadReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
+
+  // Leaving reviews/reactions can unlock engagement badges (Peer Reviewer,
+  // Community Champion). Fire this after any peer-review action; it's
+  // silent unless something new was actually earned.
+  const checkForNewBadges = async () => {
+    if (!user) return;
+    try {
+      const { evaluateAndAwardBadges } = await import('@/lib/badgeEngine');
+      const newlyEarned = await evaluateAndAwardBadges(user.uid, user.badges);
+      if (newlyEarned.length > 0) {
+        await refreshUser();
+        setBadgeNotice(`🏆 New badge unlocked: ${newlyEarned.map(b => b.name).join(', ')}!`);
+      }
+    } catch (err) {
+      console.error('Failed to evaluate badges:', err);
+    }
+  };
 
   const handleEmojiClick = async (review: PeerReview, emoji: string) => {
     if (!user) return;
@@ -83,6 +101,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
     setReviews(prev => prev.map(r => (r.id === review.id ? { ...r, emojiReactions: reactions } : r)));
     try {
       await updatePeerReviewReactions(review.id, reactions);
+      checkForNewBadges();
     } catch (err) {
       console.error('Failed to save reaction:', err);
       setReviews(prev => prev.map(r => (r.id === review.id ? review : r)));
@@ -106,6 +125,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
       });
       setComment('');
       await loadReviews();
+      checkForNewBadges();
 
       // Let the submission's owner know someone commented on their work.
       // Skip self-notifications if a student somehow reviews their own work.
@@ -147,6 +167,18 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
           {error}
+        </div>
+      )}
+
+      {badgeNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-[#c9993f]/40 bg-[#c9993f]/10 px-3 py-2 text-sm text-[#0d1b2a]">
+          <span>{badgeNotice}</span>
+          <button
+            onClick={() => setBadgeNotice(null)}
+            className="text-[#0d1b2a]/60 hover:text-[#0d1b2a] font-medium"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
