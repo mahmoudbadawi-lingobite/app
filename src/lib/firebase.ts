@@ -363,6 +363,10 @@ export const awardBadgeToUser = async (userId: string, badgeId: string) => {
   }
 };
 
+export const updateUserStreak = async (userId: string, currentStreak: number) => {
+  await updateDoc(doc(db, 'users', userId), { currentStreak });
+};
+
 // --- Real-time Subscriptions ---
 export const subscribeToSubmissions = (
   studentId: string,
