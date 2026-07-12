@@ -3,6 +3,7 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import AppHeader from '@/components/layout/AppHeader';
 import AuthProvider, { useAuth } from '@/components/auth/AuthProvider';
 import LessonCard from '@/components/lessons/LessonCard';
@@ -13,30 +14,38 @@ import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
 import StudentProgress from '@/components/progress/StudentProgress';
 import PeerFeedbackBrowser from '@/components/peer/PeerFeedbackBrowser';
-import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer } from '@/lib/firebase';
+import { createSubmission, getStudentSubmissions, getPeerReviewsByReviewer, getLessons, getLessonById } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
-  Sparkles, TrendingUp, Users, Zap, BarChart3
+  Sparkles, TrendingUp, Users, Zap, BarChart3, Loader2
 } from 'lucide-react';
-import { ALL_LESSONS } from '@/lib/mockData';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
 
 type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress' | 'peer';
 
 const AppContent: React.FC = () => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, refreshUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentView, setCurrentView] = useState<View>('home');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [sharedLessonNotice, setSharedLessonNotice] = useState<string | null>(null);
+  const [newBadgeNotice, setNewBadgeNotice] = useState<string | null>(null);
 
   // Real submissions for the signed-in student, replacing the old mock
   // data used to derive lesson progress badges and home stats.
   const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
   const [peerReviewsGiven, setPeerReviewsGiven] = useState(0);
+
+  // Published lessons, fetched from Firestore. Previously this screen
+  // rendered a hardcoded mock lesson list, so anything a teacher created
+  // and published never actually showed up for students.
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(true);
 
   const isHome = currentView === 'home';
   useEffect(() => {
@@ -66,14 +75,66 @@ const AppContent: React.FC = () => {
     // shows up immediately (e.g. after handleLessonComplete navigates back).
   }, [user, isHome]);
 
-  const pronLessons = ALL_LESSONS.filter(l => l.type === 'pronunciation');
-  const vocabLessons = ALL_LESSONS.filter(l => l.type === 'vocabulary');
-  const grammarLessons = ALL_LESSONS.filter(l => l.type === 'grammar');
+  // Fetch published lessons whenever we land on Home, so a lesson a
+  // teacher just published (possibly in another tab/session) shows up
+  // without requiring a full page reload.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isHome) return;
+    (async () => {
+      setLoadingLessons(true);
+      try {
+        const data = await getLessons();
+        if (!cancelled) setLessons(data as Lesson[]);
+      } catch (err) {
+        console.error('Failed to load lessons:', err);
+      } finally {
+        if (!cancelled) setLoadingLessons(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isHome]);
+
+  // Shared lesson links: if the page was opened with ?lesson=<id>, jump
+  // straight into that lesson once the user is signed in. This is what
+  // powers the "Share" button on lesson cards.
+  useEffect(() => {
+    const sharedLessonId = searchParams.get('lesson');
+    if (!user || !sharedLessonId || currentView === 'lesson') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const lesson = await getLessonById(sharedLessonId);
+        if (cancelled) return;
+        if (lesson) {
+          setActiveLesson(lesson as Lesson);
+          setLessonProgress(0);
+          setCurrentView('lesson');
+        } else {
+          setSharedLessonNotice('That shared lesson link is no longer available.');
+          setSearchParams({}, { replace: true });
+        }
+      } catch (err) {
+        console.error('Failed to load shared lesson:', err);
+        if (!cancelled) {
+          setSharedLessonNotice('Something went wrong opening that shared lesson.');
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, searchParams]);
+
+  const pronLessons = lessons.filter(l => l.type === 'pronunciation');
+  const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
+  const grammarLessons = lessons.filter(l => l.type === 'grammar');
 
   const handleLessonClick = (lesson: Lesson) => {
     setActiveLesson(lesson);
     setLessonProgress(0);
     setCurrentView('lesson');
+    setSearchParams({ lesson: lesson.id }, { replace: false });
   };
 
 const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
@@ -84,13 +145,36 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
     window.alert('Something went wrong saving your submission. Please check your connection and try again.');
     return;
   }
+
+  // Check whether this submission just unlocked any achievements.
+  if (user) {
+    try {
+      const { evaluateAndAwardBadges } = await import('@/lib/badgeEngine');
+      const newlyEarned = await evaluateAndAwardBadges(user.uid, user.badges);
+      if (newlyEarned.length > 0) {
+        await refreshUser();
+        const names = newlyEarned.map(b => b.name).join(', ');
+        setNewBadgeNotice(
+          newlyEarned.length === 1
+            ? `New badge unlocked: "${names}"! Check it out on the Achievements page.`
+            : `New badges unlocked: ${names}! Check them out on the Achievements page.`
+        );
+      }
+    } catch (err) {
+      // Badge evaluation shouldn't block the student from moving on.
+      console.error('Failed to evaluate badges:', err);
+    }
+  }
+
   setCurrentView('home');
   setActiveLesson(null);
+  setSearchParams({}, { replace: false });
 };
 
   const handleBackToHome = () => {
     setCurrentView('home');
     setActiveLesson(null);
+    setSearchParams({}, { replace: false });
   };
 
   const renderLessonModule = () => {
@@ -149,6 +233,28 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
   const renderHome = () => (
     <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        {sharedLessonNotice && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>{sharedLessonNotice}</span>
+            <button
+              onClick={() => setSharedLessonNotice(null)}
+              className="text-amber-800/60 hover:text-amber-800 font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        {newBadgeNotice && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-[#c9993f]/40 bg-[#c9993f]/10 px-4 py-3 text-sm text-[#0d1b2a]">
+            <span>🏆 {newBadgeNotice}</span>
+            <button
+              onClick={() => setNewBadgeNotice(null)}
+              className="text-[#0d1b2a]/60 hover:text-[#0d1b2a] font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Hero Section */}
         <div className="relative rounded-[1.5rem] overflow-hidden mb-10 bg-gradient-to-br from-[#0d1b2a] to-[#1a2d42]">
           <div className="absolute inset-0 opacity-10">
@@ -171,31 +277,34 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
                 Interactive pronunciation, vocabulary, and grammar lessons with personalized teacher feedback.
               </p>
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setCurrentView('badges')}
-                  className="lb-btn-gold flex items-center gap-2"
-                >
-                  <Trophy className="w-4 h-4" /> View Achievements
-                </button>
-                <button
-                  onClick={() => setCurrentView('progress')}
-                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
-                >
-                  <BarChart3 className="w-4 h-4" /> My Progress
-                </button>
-                <button
-                  onClick={() => setCurrentView('peer')}
-                  className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" /> Peer Feedback
-                </button>
-                {isTeacher && (
+                {isTeacher ? (
                   <button
                     onClick={() => setCurrentView('teacher')}
-                    className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    className="lb-btn-gold flex items-center gap-2"
                   >
                     <GraduationCap className="w-4 h-4" /> Teacher Dashboard
                   </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setCurrentView('badges')}
+                      className="lb-btn-gold flex items-center gap-2"
+                    >
+                      <Trophy className="w-4 h-4" /> View Achievements
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('progress')}
+                      className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    >
+                      <BarChart3 className="w-4 h-4" /> My Progress
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('peer')}
+                      className="lb-btn-outline text-[#faf6ef] border-[#faf6ef]/30 hover:bg-[#faf6ef]/10 flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" /> Peer Feedback
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -205,7 +314,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         {/* Stats Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
-            { label: 'Lessons Available', value: ALL_LESSONS.length, icon: BookOpen, color: 'text-[#c9993f]' },
+            { label: 'Lessons Available', value: lessons.length, icon: BookOpen, color: 'text-[#c9993f]' },
             { label: 'Completed', value: studentSubmissions.filter(s => s.status === 'graded').length, icon: TrendingUp, color: 'text-[#38a169]' },
             { label: 'Peer Reviews', value: peerReviewsGiven, icon: Users, color: 'text-[#8b5cf6]' },
             { label: 'Current Streak', value: `${user?.currentStreak || 0} days`, icon: Zap, color: 'text-orange-500' },
@@ -254,55 +363,103 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {ALL_LESSONS.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : lessons.length === 0 ? (
+              <div className="text-center py-16">
+                <BookOpen className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {lessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="pronunciation" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {pronLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : pronLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <Mic className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No pronunciation lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {pronLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="vocabulary" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {vocabLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : vocabLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <BookMarked className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No vocabulary lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {vocabLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="grammar" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {grammarLessons.map(lesson => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onClick={() => handleLessonClick(lesson)}
-                  progress={getLessonProgress(lesson.id)}
-                />
-              ))}
-            </div>
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : grammarLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <Target className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No grammar lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {grammarLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -330,6 +487,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         }
         onBack={currentView !== 'home' ? handleBackToHome : undefined}
         onNavigateToPeerFeedback={() => setCurrentView('peer')}
+        onNavigateToProgress={() => setCurrentView('progress')}
       />
 
       {currentView === 'home' && renderHome()}
