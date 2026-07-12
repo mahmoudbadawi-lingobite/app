@@ -277,7 +277,7 @@ status: 'in_progress',
           <div className="flex items-start justify-between mb-6">
             <div className="flex-1">
               <p className="text-xs font-semibold text-[#c9993f] uppercase tracking-wider mb-2">
-                Practice Item {currentItem.order}
+                Practice Item {currentItem.order + 1}
               </p>
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#0d1b2a] mb-3">
                 {currentItem.instructions}
