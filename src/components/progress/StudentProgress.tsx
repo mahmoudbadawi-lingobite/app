@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   BarChart3, CheckCircle, Clock, Flame, Loader2, Mic,
-  BookMarked, Target, MessageSquareHeart, TrendingUp, Award,
+  BookMarked, Target, MessageSquareHeart, TrendingUp, Award, ChevronLeft,
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -17,6 +17,14 @@ import {
 import { useAuth } from '@/components/auth/AuthProvider';
 import { getStudentSubmissions, getPeerReviewsByReviewer, toDate } from '@/lib/firebase';
 import type { StudentSubmission, LessonType } from '@/types';
+
+interface Props {
+  // When a teacher opens this from the Students list, these describe the
+  // student being viewed instead of the signed-in user.
+  studentId?: string;
+  studentName?: string | null;
+  onBack?: () => void;
+}
 
 const TYPE_META: Record<LessonType, { label: string; icon: React.ElementType; color: string; light: string }> = {
   pronunciation: { label: 'Pronunciation', icon: Mic, color: '#c9993f', light: 'bg-[#c9993f]/10' },
@@ -47,15 +55,17 @@ const computeCurrentStreak = (dates: Date[]): number => {
   return streak;
 };
 
-const StudentProgress: React.FC = () => {
+const StudentProgress: React.FC<Props> = ({ studentId, studentName, onBack }) => {
   const { user } = useAuth();
+  const targetUid = studentId ?? user?.uid;
+  const targetName = studentId ? (studentName ?? 'Student') : user?.displayName;
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [peerReviewsGiven, setPeerReviewsGiven] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!targetUid) return;
     let cancelled = false;
 
     const load = async () => {
@@ -63,15 +73,15 @@ const StudentProgress: React.FC = () => {
       setError(null);
       try {
         const [subs, reviews] = await Promise.all([
-          getStudentSubmissions(user.uid),
-          getPeerReviewsByReviewer(user.uid),
+          getStudentSubmissions(targetUid),
+          getPeerReviewsByReviewer(targetUid),
         ]);
         if (cancelled) return;
         setSubmissions(subs as StudentSubmission[]);
         setPeerReviewsGiven(reviews.length);
       } catch (err) {
         console.error('Failed to load progress data:', err);
-        if (!cancelled) setError('Could not load your progress right now. Please try again shortly.');
+        if (!cancelled) setError('Could not load progress right now. Please try again shortly.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -79,7 +89,7 @@ const StudentProgress: React.FC = () => {
 
     load();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [targetUid]);
 
   const stats = useMemo(() => {
     const graded = submissions.filter(s => s.status === 'graded' && s.totalScore !== undefined);
@@ -130,14 +140,14 @@ const StudentProgress: React.FC = () => {
     return { avgPercent, completedCount: completed.length, gradedCount: graded.length, streak, byType, trend, recent };
   }, [submissions]);
 
-  if (!user) return null;
+  if (!targetUid) return null;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8 flex items-center justify-center">
         <div className="flex items-center gap-3 text-[#0d1b2a]/40">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Loading your progress...</span>
+          <span className="text-sm">Loading progress...</span>
         </div>
       </div>
     );
@@ -154,13 +164,27 @@ const StudentProgress: React.FC = () => {
     <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#38a169] to-[#0d1b2a] flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">My Progress</h1>
-            <p className="text-sm text-[#0d1b2a]/50">Your real learning activity, tracked lesson by lesson</p>
+        <div className="mb-8">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="lb-btn-outline flex items-center gap-2 mb-6"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back to Students
+            </button>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#38a169] to-[#0d1b2a] flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-serif text-3xl font-bold text-[#0d1b2a]">
+                {studentId ? `${targetName}'s Progress` : 'My Progress'}
+              </h1>
+              <p className="text-sm text-[#0d1b2a]/50">
+                {studentId ? 'Real learning activity, tracked lesson by lesson' : 'Your real learning activity, tracked lesson by lesson'}
+              </p>
+            </div>
           </div>
         </div>
 
