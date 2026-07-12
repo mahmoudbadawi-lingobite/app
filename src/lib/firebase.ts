@@ -29,6 +29,7 @@ import {
   onSnapshot,
   writeBatch,
   increment,
+  arrayUnion,
   type QuerySnapshot,
   type DocumentData,
 } from 'firebase/firestore';
@@ -351,16 +352,26 @@ export const getAllBadges = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+// Uses arrayUnion so this is a single atomic Firestore write rather than a
+// read-modify-write. That matters because when several badges qualify in
+// the same evaluation pass, awardBadgesToUser below fires one write with
+// all of them — but this single-badge version stays available for any
+// other caller and is itself now race-safe on its own.
 export const awardBadgeToUser = async (userId: string, badgeId: string) => {
   const userRef = doc(db, 'users', userId);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) return;
-  const userData = userSnap.data();
-  const badges = userData.badges || [];
-  if (!badges.includes(badgeId)) {
-    badges.push(badgeId);
-    await updateDoc(userRef, { badges });
-  }
+  await updateDoc(userRef, { badges: arrayUnion(badgeId) });
+};
+
+// Awards multiple newly-earned badges in a single atomic write. Previously
+// each badge was awarded via its own parallel getDoc -> push -> updateDoc,
+// so when two+ badges qualified in the same pass (e.g. a first submission
+// that was also a perfect score), the writes raced and whichever updateDoc
+// finished last silently overwrote the other's badge. arrayUnion collapses
+// all of them into one write, so no badge can be lost that way.
+export const awardBadgesToUser = async (userId: string, badgeIds: string[]) => {
+  if (badgeIds.length === 0) return;
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, { badges: arrayUnion(...badgeIds) });
 };
 
 export const updateUserStreak = async (userId: string, currentStreak: number) => {

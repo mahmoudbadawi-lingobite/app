@@ -14,7 +14,7 @@ import {
   getStudentSubmissions,
   getPeerReviewsByReviewer,
   getLessons,
-  awardBadgeToUser,
+  awardBadgesToUser,
   updateUserStreak,
 } from './firebase';
 import type { Badge, LessonType, StudentSubmission } from '@/types';
@@ -150,7 +150,7 @@ export const evaluateAndAwardBadges = async (
   }
 
   await Promise.all([
-    ...newlyEarned.map(b => awardBadgeToUser(userId, b.id)),
+    awardBadgesToUser(userId, newlyEarned.map(b => b.id)),
     updateUserStreak(userId, streak),
   ]);
 
