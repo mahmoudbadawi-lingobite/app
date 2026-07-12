@@ -147,16 +147,44 @@ export const ALL_LESSONS: Lesson[] = [...PRONUNCIATION_LESSONS, ...VOCABULARY_LE
 
 // --- Badges ---
 export const BADGES: Badge[] = [
+  // --- Milestone (any lesson type) ---
   { id: 'badge_001', name: 'First Steps', description: 'Complete your first lesson', imageUrl: '/badges/first_steps.png', criteria: { type: 'count', threshold: 1 }, category: 'milestone', tier: 'bronze' },
-  { id: 'badge_002', name: 'Pronunciation Rookie', description: 'Complete 5 pronunciation lessons', imageUrl: '/badges/pron_rookie.png', criteria: { type: 'count', threshold: 5, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'bronze' },
-  { id: 'badge_003', name: 'Perfect Pitch', description: 'Get a perfect 10/10 pronunciation score', imageUrl: '/badges/perfect_pitch.png', criteria: { type: 'perfect_score', threshold: 10, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'silver' },
-  { id: 'badge_004', name: 'Word Wizard', description: 'Score 100% on 3 vocabulary MCQ sets', imageUrl: '/badges/word_wizard.png', criteria: { type: 'count', threshold: 3, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'silver' },
-  { id: 'badge_005', name: 'Grammar Guardian', description: 'Complete all grammar lessons with 80%+', imageUrl: '/badges/grammar_guardian.png', criteria: { type: 'score_threshold', threshold: 80, lessonType: 'grammar' }, category: 'grammar', tier: 'gold' },
-  { id: 'badge_006', name: '5-Day Streak', description: 'Practice 5 days in a row', imageUrl: '/badges/streak_5.png', criteria: { type: 'streak', threshold: 5 }, category: 'engagement', tier: 'bronze' },
-  { id: 'badge_007', name: 'Peer Reviewer', description: 'Leave 5 emoji reactions on peer submissions', imageUrl: '/badges/peer_reviewer.png', criteria: { type: 'peer_reviews', threshold: 5 }, category: 'engagement', tier: 'bronze' },
-  { id: 'badge_008', name: 'Community Champion', description: 'Leave 20 helpful peer reactions', imageUrl: '/badges/community_champ.png', criteria: { type: 'peer_reviews', threshold: 20 }, category: 'engagement', tier: 'gold' },
-  { id: 'badge_009', name: 'Pronunciation Master', description: 'Complete 10 pronunciation lessons with avg 8+', imageUrl: '/badges/pron_master.png', criteria: { type: 'count', threshold: 10, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'platinum' },
+  { id: 'badge_013', name: 'Getting Started', description: 'Complete 5 lessons of any kind', imageUrl: '/badges/getting_started.png', criteria: { type: 'count', threshold: 5 }, category: 'milestone', tier: 'bronze' },
+  { id: 'badge_014', name: 'Dedicated Learner', description: 'Complete 15 lessons of any kind', imageUrl: '/badges/dedicated_learner.png', criteria: { type: 'count', threshold: 15 }, category: 'milestone', tier: 'silver' },
+  { id: 'badge_015', name: 'Renaissance Learner', description: 'Complete at least one pronunciation, vocabulary, and grammar lesson', imageUrl: '/badges/renaissance.png', criteria: { type: 'category_coverage', threshold: 1 }, category: 'milestone', tier: 'gold' },
   { id: 'badge_010', name: 'LingoBite Legend', description: 'Complete 50 lessons across all categories', imageUrl: '/badges/legend.png', criteria: { type: 'count', threshold: 50 }, category: 'milestone', tier: 'platinum' },
+  { id: 'badge_016', name: 'Century Club', description: 'Rare: complete 100 lessons across all categories', imageUrl: '/badges/century_club.png', criteria: { type: 'count', threshold: 100 }, category: 'milestone', tier: 'platinum' },
+
+  // --- Pronunciation ---
+  { id: 'badge_011', name: 'Pronunciation Starter', description: 'Complete your first pronunciation lesson', imageUrl: '/badges/pron_starter.png', criteria: { type: 'count', threshold: 1, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'bronze' },
+  { id: 'badge_002', name: 'Pronunciation Rookie', description: 'Complete 5 pronunciation lessons', imageUrl: '/badges/pron_rookie.png', criteria: { type: 'count', threshold: 5, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'bronze' },
+  { id: 'badge_003', name: 'Perfect Pitch', description: 'Get a perfect score on a pronunciation lesson', imageUrl: '/badges/perfect_pitch.png', criteria: { type: 'perfect_score', threshold: 100, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'silver' },
+  { id: 'badge_017', name: 'Pronunciation Pro', description: 'Complete 15 pronunciation lessons', imageUrl: '/badges/pron_pro.png', criteria: { type: 'count', threshold: 15, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'gold' },
+  { id: 'badge_009', name: 'Pronunciation Master', description: 'Complete 30 pronunciation lessons', imageUrl: '/badges/pron_master.png', criteria: { type: 'count', threshold: 30, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'platinum' },
+  { id: 'badge_018', name: 'Golden Tongue', description: 'Rare: get a perfect score on 5 different pronunciation lessons', imageUrl: '/badges/golden_tongue.png', criteria: { type: 'perfect_count', threshold: 5, lessonType: 'pronunciation' }, category: 'pronunciation', tier: 'platinum' },
+
+  // --- Vocabulary ---
+  { id: 'badge_012', name: 'Vocabulary Starter', description: 'Complete your first vocabulary lesson', imageUrl: '/badges/vocab_starter.png', criteria: { type: 'count', threshold: 1, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'bronze' },
+  { id: 'badge_004', name: 'Word Wizard', description: 'Score 100% on 3 vocabulary lessons', imageUrl: '/badges/word_wizard.png', criteria: { type: 'perfect_count', threshold: 3, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'silver' },
+  { id: 'badge_019', name: 'Vocabulary Pro', description: 'Complete 15 vocabulary lessons', imageUrl: '/badges/vocab_pro.png', criteria: { type: 'count', threshold: 15, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'gold' },
+  { id: 'badge_020', name: 'Lexicon Master', description: 'Complete 25 vocabulary lessons', imageUrl: '/badges/lexicon_master.png', criteria: { type: 'count', threshold: 25, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'gold' },
+  { id: 'badge_021', name: 'Wordsmith Elite', description: 'Rare: score 100% on 5 different vocabulary lessons', imageUrl: '/badges/wordsmith_elite.png', criteria: { type: 'perfect_count', threshold: 5, lessonType: 'vocabulary' }, category: 'vocabulary', tier: 'platinum' },
+
+  // --- Grammar ---
+  { id: 'badge_022', name: 'Grammar Starter', description: 'Complete your first grammar lesson', imageUrl: '/badges/grammar_starter.png', criteria: { type: 'count', threshold: 1, lessonType: 'grammar' }, category: 'grammar', tier: 'bronze' },
+  { id: 'badge_023', name: 'Grammar Apprentice', description: 'Complete 5 grammar lessons', imageUrl: '/badges/grammar_apprentice.png', criteria: { type: 'count', threshold: 5, lessonType: 'grammar' }, category: 'grammar', tier: 'bronze' },
+  { id: 'badge_005', name: 'Grammar Guardian', description: 'Complete all grammar lessons with 80%+', imageUrl: '/badges/grammar_guardian.png', criteria: { type: 'score_threshold', threshold: 80, lessonType: 'grammar' }, category: 'grammar', tier: 'gold' },
+  { id: 'badge_024', name: 'Grammar Sage', description: 'Rare: complete all grammar lessons with 95%+', imageUrl: '/badges/grammar_sage.png', criteria: { type: 'score_threshold', threshold: 95, lessonType: 'grammar' }, category: 'grammar', tier: 'platinum' },
+
+  // --- Engagement ---
+  { id: 'badge_006', name: '5-Day Streak', description: 'Practice 5 days in a row', imageUrl: '/badges/streak_5.png', criteria: { type: 'streak', threshold: 5 }, category: 'engagement', tier: 'bronze' },
+  { id: 'badge_027', name: '2-Week Streak', description: 'Practice 14 days in a row', imageUrl: '/badges/streak_14.png', criteria: { type: 'streak', threshold: 14 }, category: 'engagement', tier: 'silver' },
+  { id: 'badge_028', name: 'Unstoppable', description: 'Practice 30 days in a row', imageUrl: '/badges/streak_30.png', criteria: { type: 'streak', threshold: 30 }, category: 'engagement', tier: 'gold' },
+  { id: 'badge_029', name: 'Iron Will', description: 'Rare: practice 100 days in a row', imageUrl: '/badges/streak_100.png', criteria: { type: 'streak', threshold: 100 }, category: 'engagement', tier: 'platinum' },
+  { id: 'badge_007', name: 'Peer Reviewer', description: 'Leave 5 reactions on peer submissions', imageUrl: '/badges/peer_reviewer.png', criteria: { type: 'peer_reviews', threshold: 5 }, category: 'engagement', tier: 'bronze' },
+  { id: 'badge_025', name: 'Helpful Peer', description: 'Leave 10 reactions on peer submissions', imageUrl: '/badges/helpful_peer.png', criteria: { type: 'peer_reviews', threshold: 10 }, category: 'engagement', tier: 'silver' },
+  { id: 'badge_008', name: 'Community Champion', description: 'Leave 20 helpful peer reactions', imageUrl: '/badges/community_champ.png', criteria: { type: 'peer_reviews', threshold: 20 }, category: 'engagement', tier: 'gold' },
+  { id: 'badge_026', name: 'Community Legend', description: 'Rare: leave 50 helpful peer reactions', imageUrl: '/badges/community_legend.png', criteria: { type: 'peer_reviews', threshold: 50 }, category: 'engagement', tier: 'platinum' },
 ];
 
 // --- Mock Submissions for Teacher Dashboard ---
