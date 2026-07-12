@@ -27,13 +27,14 @@ import './App.css';
 type View = 'home' | 'lesson' | 'teacher' | 'badges' | 'progress' | 'peer';
 
 const AppContent: React.FC = () => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentView, setCurrentView] = useState<View>('home');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [sharedLessonNotice, setSharedLessonNotice] = useState<string | null>(null);
+  const [newBadgeNotice, setNewBadgeNotice] = useState<string | null>(null);
 
   // Real submissions for the signed-in student, replacing the old mock
   // data used to derive lesson progress badges and home stats.
@@ -144,6 +145,27 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
     window.alert('Something went wrong saving your submission. Please check your connection and try again.');
     return;
   }
+
+  // Check whether this submission just unlocked any achievements.
+  if (user) {
+    try {
+      const { evaluateAndAwardBadges } = await import('@/lib/badgeEngine');
+      const newlyEarned = await evaluateAndAwardBadges(user.uid, user.badges);
+      if (newlyEarned.length > 0) {
+        await refreshUser();
+        const names = newlyEarned.map(b => b.name).join(', ');
+        setNewBadgeNotice(
+          newlyEarned.length === 1
+            ? `New badge unlocked: "${names}"! Check it out on the Achievements page.`
+            : `New badges unlocked: ${names}! Check them out on the Achievements page.`
+        );
+      }
+    } catch (err) {
+      // Badge evaluation shouldn't block the student from moving on.
+      console.error('Failed to evaluate badges:', err);
+    }
+  }
+
   setCurrentView('home');
   setActiveLesson(null);
   setSearchParams({}, { replace: false });
@@ -217,6 +239,17 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             <button
               onClick={() => setSharedLessonNotice(null)}
               className="text-amber-800/60 hover:text-amber-800 font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        {newBadgeNotice && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-[#c9993f]/40 bg-[#c9993f]/10 px-4 py-3 text-sm text-[#0d1b2a]">
+            <span>🏆 {newBadgeNotice}</span>
+            <button
+              onClick={() => setNewBadgeNotice(null)}
+              className="text-[#0d1b2a]/60 hover:text-[#0d1b2a] font-medium"
             >
               Dismiss
             </button>
