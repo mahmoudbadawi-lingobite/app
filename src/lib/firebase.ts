@@ -94,6 +94,17 @@ export const updateUserAvatar = async (uid: string, avatarUrl: string) => {
   await updateDoc(userRef, { customAvatarUrl: avatarUrl });
 };
 
+// All student accounts, for the Teacher Dashboard's Students list.
+export const getAllStudents = async () => {
+  const q = query(
+    collection(db, 'users'),
+    where('role', '==', 'student'),
+    orderBy('displayName', 'asc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
 export const getLessons = async (type?: string) => {
   let q = query(
     collection(db, 'lessons'),
@@ -291,6 +302,26 @@ export const getPeerReviewsByReviewer = async (reviewerId: string) => {
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+// Reviews a given student has *received* on their own submissions. Peer
+// review docs don't carry the submission owner's id directly, so this
+// walks the student's submissions and pulls reviews for each one.
+export const getPeerReviewsReceivedByStudent = async (studentId: string): Promise<DocumentData[]> => {
+  const submissions = await getStudentSubmissions(studentId);
+  const perSubmission: DocumentData[][] = await Promise.all(
+    (submissions as DocumentData[]).map(async (sub): Promise<DocumentData[]> => {
+      const reviews = await getPeerReviewsForSubmission(sub.id);
+      return reviews.map((r: DocumentData): DocumentData => ({
+        ...r,
+        lessonTitle: sub.lessonTitle,
+        lessonType: sub.lessonType,
+      }));
+    })
+  );
+  return perSubmission
+    .flat()
+    .sort((a: DocumentData, b: DocumentData) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
 };
 
 // --- Notifications ---
