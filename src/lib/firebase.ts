@@ -123,6 +123,15 @@ export const getAllStudents = async () => {
   }));
 };
 
+// All teacher accounts — used to fan out notifications (new peer review
+// comments, reported comments) to every teacher, since any of them should
+// be able to see and moderate peer feedback.
+export const getAllTeachers = async () => {
+  const q = query(collection(db, 'users'), where('role', '==', 'teacher'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
 export const getLessons = async (type?: string) => {
   let q = query(
     collection(db, 'lessons'),
@@ -310,6 +319,12 @@ export const updatePeerReviewReactions = async (
   await updateDoc(doc(db, 'peer_reviews', reviewId), { emojiReactions });
 };
 
+// Lets a teacher remove an inappropriate or reported peer review comment,
+// from either the "given" or "received" side of a student's feedback view.
+export const deletePeerReview = async (reviewId: string) => {
+  await deleteDoc(doc(db, 'peer_reviews', reviewId));
+};
+
 // Reviews a given student has *left* on classmates' work (used for
 // student-facing progress/engagement stats).
 export const getPeerReviewsByReviewer = async (reviewerId: string) => {
@@ -351,6 +366,16 @@ export const createNotification = async (data: Omit<DocumentData, 'id'>) => {
     read: false,
     createdAt: serverTimestamp(),
   });
+};
+
+// Sends the same notification to every teacher account — used so any
+// teacher can see when a student posts a peer review, or when one gets
+// reported, regardless of which teacher created the lesson.
+export const notifyAllTeachers = async (data: Omit<DocumentData, 'id' | 'recipientId'>) => {
+  const teachers = await getAllTeachers();
+  await Promise.all(
+    teachers.map(t => createNotification({ ...data, recipientId: t.id }))
+  );
 };
 
 export const getNotificationsForUser = async (userId: string) => {

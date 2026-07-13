@@ -9,12 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ThumbsUp, Star, Flame, Heart, Lightbulb,
-  Send, MessageCircle, Clock, Loader2
+  Send, MessageCircle, Clock, Loader2, Flag, CheckCircle2
 } from 'lucide-react';
 import type { PeerReview } from '@/types';
 import {
   fmtTimestamp, getPeerReviewsForSubmission,
-  addPeerReview, updatePeerReviewReactions, createNotification,
+  addPeerReview, updatePeerReviewReactions, createNotification, notifyAllTeachers,
 } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { avatarFallback } from '@/lib/utils';
@@ -43,6 +43,8 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [badgeNotice, setBadgeNotice] = useState<string | null>(null);
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
   const loadReviews = async () => {
     try {
@@ -108,6 +110,28 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
     }
   };
 
+  const handleReport = async (review: PeerReview) => {
+    if (!user || reportedIds.has(review.id) || reportingId) return;
+    setReportingId(review.id);
+    try {
+      await notifyAllTeachers({
+        type: 'peer_review_reported',
+        submissionId,
+        lessonTitle,
+        fromUserId: user.uid,
+        fromUserName: user.displayName || 'A student',
+        fromUserPhotoURL: user.customAvatarUrl || user.photoURL || null,
+        commentPreview: (review.writtenComment || '').slice(0, 140),
+      });
+      setReportedIds(prev => new Set(prev).add(review.id));
+    } catch (err) {
+      console.error('Failed to report peer review:', err);
+      setError('Could not send the report. Please try again.');
+    } finally {
+      setReportingId(null);
+    }
+  };
+
   const handleCommentSubmit = async () => {
     if (!comment.trim() || !user || posting) return;
     setPosting(true);
@@ -145,6 +169,22 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
           // A failed notification shouldn't block the comment itself.
           console.error('Failed to notify submission owner:', notifyErr);
         }
+      }
+
+      // Let teachers see the content of every peer review as it's posted,
+      // so they can keep an eye on peer feedback quality.
+      try {
+        await notifyAllTeachers({
+          type: 'peer_review_posted',
+          submissionId,
+          lessonTitle,
+          fromUserId: user.uid,
+          fromUserName: user.displayName || 'A student',
+          fromUserPhotoURL: reviewerPhotoURL,
+          commentPreview: trimmedComment.slice(0, 140),
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify teachers of new peer review:', notifyErr);
       }
     } catch (err) {
       console.error('Failed to post peer review:', err);
@@ -234,6 +274,26 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
                     </p>
                   </div>
                 </div>
+                {user && review.reviewerId !== user.uid && (
+                  reportedIds.has(review.id) ? (
+                    <span className="flex items-center gap-1 text-xs text-[#0d1b2a]/40">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Reported
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleReport(review)}
+                      disabled={reportingId === review.id}
+                      className="flex items-center gap-1 text-xs text-[#0d1b2a]/40 hover:text-red-500 transition-colors disabled:opacity-50"
+                      title="Report this comment to your teacher"
+                    >
+                      {reportingId === review.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Flag className="w-3.5 h-3.5" />
+                      }
+                      Report
+                    </button>
+                  )
+                )}
               </div>
 
               {review.writtenComment && (

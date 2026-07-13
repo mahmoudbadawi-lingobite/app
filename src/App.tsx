@@ -532,6 +532,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         onBack={currentView !== 'home' ? handleBackToHome : undefined}
         onNavigateToPeerFeedback={() => setCurrentView('peer')}
         onNavigateToProgress={() => setCurrentView('progress')}
+        onNavigateToTeacher={() => setCurrentView('teacher')}
       />
 
       {currentView === 'home' && renderHome()}

@@ -8,9 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Users, ChevronLeft, Loader2, MessageCircle, Send, Inbox,
+  Users, ChevronLeft, Loader2, MessageCircle, Send, Inbox, Trash2,
 } from 'lucide-react';
-import { getPeerReviewsByReviewer, getPeerReviewsReceivedByStudent, fmtTimestamp } from '@/lib/firebase';
+import { getPeerReviewsByReviewer, getPeerReviewsReceivedByStudent, deletePeerReview, fmtTimestamp } from '@/lib/firebase';
 import { avatarFallback } from '@/lib/utils';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -35,6 +35,22 @@ const StudentPeerFeedback: React.FC<Props> = ({ studentId, studentName, onBack }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'given' | 'received'>('received');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (reviewId: string) => {
+    if (!confirm('Delete this peer review comment? This cannot be undone.')) return;
+    setDeletingId(reviewId);
+    try {
+      await deletePeerReview(reviewId);
+      setGiven(prev => prev.filter(item => item.id !== reviewId));
+      setReceived(prev => prev.filter(item => item.id !== reviewId));
+    } catch (err) {
+      console.error('Failed to delete peer review:', err);
+      setError('Could not delete this comment right now. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -156,9 +172,22 @@ const StudentPeerFeedback: React.FC<Props> = ({ studentId, studentName, onBack }
                           <Badge variant="outline" className="text-xs">{item.lessonTitle}</Badge>
                         )}
                       </div>
-                      <span className="text-xs text-[#0d1b2a]/40 flex-shrink-0">
-                        {item.createdAt ? fmtTimestamp(item.createdAt) : ''}
-                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-[#0d1b2a]/40">
+                          {item.createdAt ? fmtTimestamp(item.createdAt) : ''}
+                        </span>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="text-[#0d1b2a]/30 hover:text-red-500 transition-colors disabled:opacity-50"
+                          title="Delete this comment"
+                        >
+                          {deletingId === item.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </div>
                     </div>
                     {item.writtenComment && (
                       <p className="text-sm text-[#0d1b2a]/70">"{item.writtenComment}"</p>

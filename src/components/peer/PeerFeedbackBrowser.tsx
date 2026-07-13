@@ -9,10 +9,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Users, Mic, BookMarked, Target, Loader2, CheckCircle,
-  Clock, MessageCircle, ChevronLeft, BookOpenCheck,
+  Clock, MessageCircle, ChevronLeft, BookOpenCheck, CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { getSubmissionsForPeerFeedback, fmtTimestamp } from '@/lib/firebase';
+import { getSubmissionsForPeerFeedback, getPeerReviewsByReviewer, fmtTimestamp } from '@/lib/firebase';
 import { avatarFallback } from '@/lib/utils';
 import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 import SubmissionContentViewer from '@/components/peer/SubmissionContentViewer';
@@ -32,6 +32,7 @@ const PeerFeedbackBrowser: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | LessonType>('all');
   const [selected, setSelected] = useState<StudentSubmission | null>(null);
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +52,21 @@ const PeerFeedbackBrowser: React.FC = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const myReviews = await getPeerReviewsByReviewer(user.uid);
+        if (cancelled) return;
+        setReviewedIds(new Set(myReviews.map((r: any) => r.submissionId)));
+      } catch (err) {
+        console.error('Failed to load which submissions were already reviewed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   const classmateSubmissions = useMemo(
     () => submissions.filter(s => s.studentId !== user?.uid),
@@ -73,7 +89,14 @@ const PeerFeedbackBrowser: React.FC = () => {
       <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <button
-            onClick={() => setSelected(null)}
+            onClick={() => {
+              setSelected(null);
+              if (user) {
+                getPeerReviewsByReviewer(user.uid)
+                  .then(myReviews => setReviewedIds(new Set(myReviews.map((r: any) => r.submissionId))))
+                  .catch(err => console.error('Failed to refresh reviewed submissions:', err));
+              }
+            }}
             className="lb-btn-outline flex items-center gap-2 mb-6"
           >
             <ChevronLeft className="w-4 h-4" /> Back to Peer Feedback
@@ -171,8 +194,13 @@ const PeerFeedbackBrowser: React.FC = () => {
                 <Card
                   key={sub.id}
                   onClick={() => setSelected(sub)}
-                  className="lb-card p-5 cursor-pointer hover:shadow-lg transition-all"
+                  className="lb-card p-5 cursor-pointer hover:shadow-lg transition-all relative"
                 >
+                  {reviewedIds.has(sub.id) && (
+                    <Badge className="absolute top-3 right-3 bg-[#0d1b2a] text-[#faf6ef] border-0 text-xs">
+                      <CheckCheck className="w-3 h-3 mr-1" /> Reviewed
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-3 mb-4">
                     <img
                       src={sub.studentPhotoURL || avatarFallback(40)}

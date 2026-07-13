@@ -20,12 +20,13 @@ import type { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebas
 interface Props {
   // Lets the bell take the user somewhere useful when a notification is
   // clicked: the Peer Feedback tab for comments, the Progress tab for
-  // grading updates.
+  // grading updates, the Teacher Dashboard for peer-review moderation.
   onNavigateToPeerFeedback?: () => void;
   onNavigateToProgress?: () => void;
+  onNavigateToTeacher?: () => void;
 }
 
-const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigateToProgress }) => {
+const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +80,8 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigat
     setOpen(false);
     if (notification.type === 'submission_graded') {
       onNavigateToProgress?.();
+    } else if (notification.type === 'peer_review_posted' || notification.type === 'peer_review_reported') {
+      onNavigateToTeacher?.();
     } else {
       onNavigateToPeerFeedback?.();
     }
@@ -137,6 +140,16 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigat
                     {notification.type === 'submission_graded' ? (
                       <>
                         {' '}graded your submission for{' '}
+                        <span className="font-medium">{notification.lessonTitle}</span>
+                      </>
+                    ) : notification.type === 'peer_review_posted' ? (
+                      <>
+                        {' '}left a peer review on{' '}
+                        <span className="font-medium">{notification.lessonTitle}</span>
+                      </>
+                    ) : notification.type === 'peer_review_reported' ? (
+                      <>
+                        {' '}reported a peer review comment on{' '}
                         <span className="font-medium">{notification.lessonTitle}</span>
                       </>
                     ) : (
