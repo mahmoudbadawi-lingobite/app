@@ -129,6 +129,7 @@ const PeerFeedbackBrowser: React.FC = () => {
           <PeerReviewPanel
             submissionId={selected.id}
             submissionOwnerId={selected.studentId}
+            lessonId={selected.lessonId}
             lessonTitle={selected.lessonTitle}
           />
         </div>

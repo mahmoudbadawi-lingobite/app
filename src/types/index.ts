@@ -282,6 +282,7 @@ export interface AppNotification {
   recipientId: string;        // uid of the user who should see this notification
   type: NotificationType;
   submissionId: string;
+  lessonId?: string;           // Lets a click jump straight to the lesson
   lessonTitle: string;
   fromUserId: string;
   fromUserName: string;

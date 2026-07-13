@@ -36,6 +36,7 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [sharedLessonNotice, setSharedLessonNotice] = useState<string | null>(null);
   const [newBadgeNotice, setNewBadgeNotice] = useState<string | null>(null);
+  const [autoShowPeerReview, setAutoShowPeerReview] = useState(false);
 
   // Real submissions for the signed-in student, replacing the old mock
   // data used to derive lesson progress badges and home stats.
@@ -98,7 +99,10 @@ const AppContent: React.FC = () => {
 
   // Shared lesson links: if the page was opened with ?lesson=<id>, jump
   // straight into that lesson once the user is signed in. This is what
-  // powers the "Share" button on lesson cards.
+  // powers the "Share" button on lesson cards, and also how a "someone
+  // commented on your submission" notification deep-links a student
+  // straight back into the lesson (with ?peerReview=1 to auto-open the
+  // peer review panel so they can find and, if needed, report it).
   useEffect(() => {
     const sharedLessonId = searchParams.get('lesson');
     if (!user || !sharedLessonId || currentView === 'lesson') return;
@@ -110,6 +114,7 @@ const AppContent: React.FC = () => {
         if (lesson) {
           setActiveLesson(lesson as Lesson);
           setLessonProgress(0);
+          setAutoShowPeerReview(searchParams.get('peerReview') === '1');
           setCurrentView('lesson');
         } else {
           setSharedLessonNotice('That shared lesson link is no longer available.');
@@ -127,6 +132,13 @@ const AppContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, searchParams]);
 
+  // Lets the notification bell jump a student straight to a lesson (with
+  // its peer review panel already open) instead of the classmate-browsing
+  // screen, which never shows the student's own submissions.
+  const handleNavigateToLesson = (lessonId: string) => {
+    setSearchParams({ lesson: lessonId, peerReview: '1' }, { replace: false });
+  };
+
   const pronLessons = lessons.filter(l => l.type === 'pronunciation');
   const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
   const grammarLessons = lessons.filter(l => l.type === 'grammar');
@@ -135,6 +147,7 @@ const AppContent: React.FC = () => {
   const handleLessonClick = (lesson: Lesson) => {
     setActiveLesson(lesson);
     setLessonProgress(0);
+    setAutoShowPeerReview(false);
     setCurrentView('lesson');
     setSearchParams({ lesson: lesson.id }, { replace: false });
   };
@@ -195,6 +208,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             teacherView={isTeacher}
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
+            autoShowPeerReview={autoShowPeerReview}
           />
         );
       case 'vocabulary':
@@ -206,6 +220,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             teacherView={isTeacher}
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
+            autoShowPeerReview={autoShowPeerReview}
           />
         );
       case 'grammar':
@@ -217,6 +232,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             teacherView={isTeacher}
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
+            autoShowPeerReview={autoShowPeerReview}
           />
         );
       case 'reading':
@@ -228,6 +244,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             teacherView={isTeacher}
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
+            autoShowPeerReview={autoShowPeerReview}
           />
         );
       default:
@@ -533,6 +550,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         onNavigateToPeerFeedback={() => setCurrentView('peer')}
         onNavigateToProgress={() => setCurrentView('progress')}
         onNavigateToTeacher={() => setCurrentView('teacher')}
+        onNavigateToLesson={handleNavigateToLesson}
       />
 
       {currentView === 'home' && renderHome()}

@@ -3,7 +3,7 @@
 // Context Fill-In + Image Canvas Annotation + MCQs
 // ============================================================
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,9 +30,10 @@ interface Props {
   teacherView?: boolean;
   existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
+  autoShowPeerReview?: boolean;
 }
 
-const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress }) => {
+const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress, autoShowPeerReview }) => {
   const { user } = useAuth();
   const items = lesson.items as VocabItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -41,6 +42,12 @@ const VocabularyModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack
   const [imageAnnotations, setImageAnnotations] = useState<StudentAnnotation[]>([]);
   const [annotationMode, setAnnotationMode] = useState(false);
   const [showPeerReview, setShowPeerReview] = useState(false);
+
+  // Deep-linked here from a "someone commented" notification — auto-open
+  // the peer review panel so the student can find (and report) it right away.
+  useEffect(() => {
+    if (autoShowPeerReview) setShowPeerReview(true);
+  }, [autoShowPeerReview]);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
@@ -328,6 +335,7 @@ status: 'in_progress',
             <PeerReviewPanel
               submissionId={existingSubmission.id}
               submissionOwnerId={existingSubmission.studentId}
+              lessonId={lesson.id}
               lessonTitle={existingSubmission.lessonTitle}
             />
           </div>

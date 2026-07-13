@@ -3,7 +3,7 @@
 // MCQs + Sentence Generation Spark with word bank
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,9 +29,10 @@ interface Props {
   teacherView?: boolean;
   existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
+  autoShowPeerReview?: boolean;
 }
 
-const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress }) => {
+const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress, autoShowPeerReview }) => {
   const { user } = useAuth();
   const items = lesson.items as GrammarItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -41,6 +42,12 @@ const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
   const [customWord, setCustomWord] = useState('');
   const [sparkedSentence, setSparkedSentence] = useState('');
   const [showPeerReview, setShowPeerReview] = useState(false);
+
+  // Deep-linked here from a "someone commented" notification — auto-open
+  // the peer review panel so the student can find (and report) it right away.
+  useEffect(() => {
+    if (autoShowPeerReview) setShowPeerReview(true);
+  }, [autoShowPeerReview]);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
@@ -304,6 +311,7 @@ studentName: user?.displayName || '',
             <PeerReviewPanel
               submissionId={existingSubmission.id}
               submissionOwnerId={existingSubmission.studentId}
+              lessonId={lesson.id}
               lessonTitle={existingSubmission.lessonTitle}
             />
           </div>

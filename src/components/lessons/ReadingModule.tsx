@@ -4,7 +4,7 @@
 // Essay, and Short Answer questions
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,15 +32,22 @@ interface Props {
   teacherView?: boolean;
   existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
+  autoShowPeerReview?: boolean;
 }
 
-const ReadingModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress }) => {
+const ReadingModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress, autoShowPeerReview }) => {
   const { user } = useAuth();
   const items = lesson.items as ReadingItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showResult, setShowResult] = useState<Record<string, boolean>>({});
   const [showPeerReview, setShowPeerReview] = useState(false);
+
+  // Deep-linked here from a "someone commented" notification — auto-open
+  // the peer review panel so the student can find (and report) it right away.
+  useEffect(() => {
+    if (autoShowPeerReview) setShowPeerReview(true);
+  }, [autoShowPeerReview]);
   const [showPassage, setShowPassage] = useState(true);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
@@ -357,6 +364,7 @@ const ReadingModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
             <PeerReviewPanel
               submissionId={existingSubmission.id}
               submissionOwnerId={existingSubmission.studentId}
+              lessonId={lesson.id}
               lessonTitle={existingSubmission.lessonTitle}
             />
           </div>

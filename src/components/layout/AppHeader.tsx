@@ -16,9 +16,10 @@ interface AppHeaderProps {
   onNavigateToPeerFeedback?: () => void;
   onNavigateToProgress?: () => void;
   onNavigateToTeacher?: () => void;
+  onNavigateToLesson?: (lessonId: string) => void;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher, onNavigateToLesson }) => {
   const { user, isTeacher, switchRole, openAvatarPicker } = useAuth();
 
   return (
@@ -90,7 +91,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigate
                   </button>
                 )}
 
-                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} onNavigateToProgress={onNavigateToProgress} onNavigateToTeacher={onNavigateToTeacher} />
+                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} onNavigateToProgress={onNavigateToProgress} onNavigateToTeacher={onNavigateToTeacher} onNavigateToLesson={onNavigateToLesson} />
 
                 <div className="flex items-center gap-2.5 pl-2 border-l border-[#c9993f]/20">
                   <div className="hidden sm:block text-right">

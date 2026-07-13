@@ -23,6 +23,7 @@ interface Props {
   submissionId: string;
   // Needed so a comment can notify the classmate whose work is being reviewed.
   submissionOwnerId: string;
+  lessonId?: string;
   lessonTitle: string;
 }
 
@@ -35,7 +36,7 @@ const EMOJI_OPTIONS = [
   { emoji: '💡', icon: Lightbulb, label: 'Insightful' },
 ];
 
-const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonTitle }) => {
+const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonId, lessonTitle }) => {
   const { user, refreshUser } = useAuth();
   const [reviews, setReviews] = useState<PeerReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +118,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
       await notifyAllTeachers({
         type: 'peer_review_reported',
         submissionId,
+        lessonId,
         lessonTitle,
         fromUserId: user.uid,
         fromUserName: user.displayName || 'A student',
@@ -159,6 +161,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
             recipientId: submissionOwnerId,
             type: 'peer_comment',
             submissionId,
+            lessonId,
             lessonTitle,
             fromUserId: user.uid,
             fromUserName: user.displayName || 'A classmate',
@@ -177,6 +180,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
         await notifyAllTeachers({
           type: 'peer_review_posted',
           submissionId,
+          lessonId,
           lessonTitle,
           fromUserId: user.uid,
           fromUserName: user.displayName || 'A student',
