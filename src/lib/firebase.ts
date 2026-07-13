@@ -102,7 +102,25 @@ export const getAllStudents = async () => {
     orderBy('displayName', 'asc')
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // The "lessonsCompleted" field on the user doc is never kept in sync when a
+  // submission is graded, so it drifts to 0/stale. Count actual graded
+  // submissions per student instead, so the number shown is always accurate.
+  const gradedSnap = await getDocs(query(
+    collection(db, 'student_submissions'),
+    where('status', '==', 'graded')
+  ));
+  const gradedCounts: Record<string, number> = {};
+  gradedSnap.docs.forEach(d => {
+    const studentId = d.data().studentId as string;
+    if (studentId) gradedCounts[studentId] = (gradedCounts[studentId] || 0) + 1;
+  });
+
+  return students.map(s => ({
+    ...s,
+    lessonsCompleted: gradedCounts[(s as { id: string }).id] || 0,
+  }));
 };
 
 export const getLessons = async (type?: string) => {
