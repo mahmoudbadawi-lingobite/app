@@ -19,16 +19,18 @@ import type { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from 'firebas
 
 interface Props {
   // Lets the bell take the user somewhere useful when a notification is
-  // clicked: straight to the lesson (with peer reviews open) for a comment
-  // on the student's own work, the Progress tab for grading updates, the
-  // Teacher Dashboard for peer-review moderation.
+  // clicked: straight to the lesson (with peer reviews open, scrolled to
+  // the exact comment) for a comment on the student's own work, the
+  // Progress tab for grading updates, or straight into the specific
+  // submission (scrolled to the exact comment) for teacher moderation.
   onNavigateToPeerFeedback?: () => void;
   onNavigateToProgress?: () => void;
   onNavigateToTeacher?: () => void;
-  onNavigateToLesson?: (lessonId: string) => void;
+  onNavigateToLesson?: (lessonId: string, reviewId?: string) => void;
+  onNavigateToSubmission?: (submissionId: string, reviewId?: string) => void;
 }
 
-const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher, onNavigateToLesson }) => {
+const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher, onNavigateToLesson, onNavigateToSubmission }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,13 +84,21 @@ const NotificationBell: React.FC<Props> = ({ onNavigateToPeerFeedback, onNavigat
     setOpen(false);
     if (notification.type === 'submission_graded') {
       onNavigateToProgress?.();
+    } else if (
+      (notification.type === 'peer_review_posted' || notification.type === 'peer_review_reported') &&
+      notification.submissionId && onNavigateToSubmission
+    ) {
+      // Take the teacher straight to the submission the comment was left
+      // on (scrolled to the comment itself), rather than the generic
+      // submissions list they'd otherwise have to search through.
+      onNavigateToSubmission(notification.submissionId, notification.reviewId);
     } else if (notification.type === 'peer_review_posted' || notification.type === 'peer_review_reported') {
       onNavigateToTeacher?.();
     } else if (notification.type === 'peer_comment' && notification.lessonId && onNavigateToLesson) {
       // Take the student straight to their own lesson with the peer review
       // panel open, rather than the classmate-browsing screen, which never
       // shows the student's own submissions.
-      onNavigateToLesson(notification.lessonId);
+      onNavigateToLesson(notification.lessonId, notification.reviewId);
     } else {
       onNavigateToPeerFeedback?.();
     }

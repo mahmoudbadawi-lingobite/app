@@ -27,7 +27,16 @@ import { useAuth } from '@/components/auth/AuthProvider';
 
 type Tab = 'submissions' | 'students' | 'lessons';
 
-const TeacherDashboard: React.FC = () => {
+interface Props {
+  // Set by a "peer review posted/reported" notification click so the
+  // dashboard can jump straight into that submission (and comment)
+  // instead of landing on the generic submissions list.
+  deepLinkSubmissionId?: string;
+  deepLinkReviewId?: string;
+  onDeepLinkConsumed?: () => void;
+}
+
+const TeacherDashboard: React.FC<Props> = ({ deepLinkSubmissionId, deepLinkReviewId, onDeepLinkConsumed }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('submissions');
 
@@ -40,6 +49,9 @@ const TeacherDashboard: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingSubmissionId, setDeletingSubmissionId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // Kept separately from the prop so it survives once the parent clears
+  // deepLinkReviewId after the jump is consumed.
+  const [highlightReviewId, setHighlightReviewId] = useState<string | undefined>(deepLinkReviewId);
 
   // --- Lessons state ---
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -50,6 +62,20 @@ const TeacherDashboard: React.FC = () => {
   const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set());
   const [bulkDeletingLessons, setBulkDeletingLessons] = useState(false);
   const [copiedLessonId, setCopiedLessonId] = useState<string | null>(null);
+
+  // Jump straight to the submission (and comment) a notification pointed
+  // at, once it's available in the loaded list.
+  useEffect(() => {
+    if (!deepLinkSubmissionId || loadingSubmissions) return;
+    const target = submissions.find(s => s.id === deepLinkSubmissionId);
+    if (target) {
+      setActiveTab('submissions');
+      setSelectedSubmission(target);
+      setHighlightReviewId(deepLinkReviewId);
+    }
+    onDeepLinkConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkSubmissionId, deepLinkReviewId, loadingSubmissions, submissions]);
 
   // Load submissions
   useEffect(() => {
@@ -300,7 +326,7 @@ const TeacherDashboard: React.FC = () => {
       <div className="min-h-screen bg-[#faf6ef] pt-20 pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <button
-            onClick={() => setSelectedSubmission(null)}
+            onClick={() => { setSelectedSubmission(null); setHighlightReviewId(undefined); }}
             className="lb-btn-outline flex items-center gap-2 mb-6"
           >
             ← Back to Dashboard
@@ -308,6 +334,7 @@ const TeacherDashboard: React.FC = () => {
           <TeacherGradeCard
             submission={selectedSubmission}
             onGrade={(data) => handleGrade(selectedSubmission.id, data)}
+            highlightReviewId={highlightReviewId}
           />
         </div>
       </div>
@@ -452,7 +479,7 @@ const TeacherDashboard: React.FC = () => {
                 {filteredSubmissions.map(sub => (
                   <Card
                     key={sub.id}
-                    onClick={() => setSelectedSubmission(sub)}
+                    onClick={() => { setSelectedSubmission(sub); setHighlightReviewId(undefined); }}
                     className={`lb-card p-5 cursor-pointer hover:shadow-lg transition-all ${
                       selectedIds.has(sub.id) ? 'ring-2 ring-[#c9993f]' : ''
                     }`}

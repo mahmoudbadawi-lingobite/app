@@ -3,28 +3,33 @@
 // Anonymous timeline with emoji reactions
 // ============================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ThumbsUp, Star, Flame, Heart, Lightbulb,
-  Send, MessageCircle, Clock, Loader2, Flag, CheckCircle2
+  Send, MessageCircle, Clock, Loader2, Flag, Trash2, AlertTriangle
 } from 'lucide-react';
 import type { PeerReview } from '@/types';
 import {
   fmtTimestamp, getPeerReviewsForSubmission,
   addPeerReview, updatePeerReviewReactions, createNotification, notifyAllTeachers,
+  reportPeerReview, deletePeerReview,
 } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { avatarFallback } from '@/lib/utils';
 
 interface Props {
   submissionId: string;
-  // Needed so a comment can notify the classmate whose work is being reviewed.
+  // Needed so a comment can notify the classmate whose work is being reviewed,
+  // and so only the owner (not any classmate) can report a comment on it.
   submissionOwnerId: string;
   lessonId?: string;
   lessonTitle: string;
+  // When set, the panel scrolls to and briefly highlights this comment once
+  // it's loaded — used when arriving here from a notification.
+  highlightReviewId?: string;
 }
 
 const EMOJI_OPTIONS = [
@@ -36,7 +41,7 @@ const EMOJI_OPTIONS = [
   { emoji: '💡', icon: Lightbulb, label: 'Insightful' },
 ];
 
-const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonId, lessonTitle }) => {
+const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, lessonId, lessonTitle, highlightReviewId }) => {
   const { user, refreshUser } = useAuth();
   const [reviews, setReviews] = useState<PeerReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,11 +51,18 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
   const [badgeNotice, setBadgeNotice] = useState<string | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
   const [reportingId, setReportingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const reviewRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const isOwner = !!user && user.uid === submissionOwnerId;
+  const isTeacher = user?.role === 'teacher';
 
   const loadReviews = async () => {
     try {
       const data = await getPeerReviewsForSubmission(submissionId);
       setReviews(data as PeerReview[]);
+      setReportedIds(new Set((data as PeerReview[]).filter(r => r.reported).map(r => r.id)));
     } catch (err) {
       console.error('Failed to load peer reviews:', err);
       setError('Could not load peer reviews right now.');
@@ -64,6 +76,18 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
     loadReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
+
+  // Once the requested comment has loaded, scroll it into view and give it
+  // a brief highlight so it's easy to spot in a long thread.
+  useEffect(() => {
+    if (!highlightReviewId || loading) return;
+    const node = reviewRefs.current.get(highlightReviewId);
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedId(highlightReviewId);
+    const timer = setTimeout(() => setHighlightedId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightReviewId, loading, reviews]);
 
   // Leaving reviews/reactions can unlock engagement badges (Peer Reviewer,
   // Community Champion). Fire this after any peer-review action; it's
@@ -112,12 +136,14 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
   };
 
   const handleReport = async (review: PeerReview) => {
-    if (!user || reportedIds.has(review.id) || reportingId) return;
+    if (!user || !isOwner || reportedIds.has(review.id) || reportingId) return;
     setReportingId(review.id);
     try {
+      await reportPeerReview(review.id, user.uid);
       await notifyAllTeachers({
         type: 'peer_review_reported',
         submissionId,
+        reviewId: review.id,
         lessonId,
         lessonTitle,
         fromUserId: user.uid,
@@ -126,11 +152,27 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
         commentPreview: (review.writtenComment || '').slice(0, 140),
       });
       setReportedIds(prev => new Set(prev).add(review.id));
+      setReviews(prev => prev.map(r => (r.id === review.id ? { ...r, reported: true, reportedBy: user.uid } : r)));
     } catch (err) {
       console.error('Failed to report peer review:', err);
       setError('Could not send the report. Please try again.');
     } finally {
       setReportingId(null);
+    }
+  };
+
+  const handleDelete = async (review: PeerReview) => {
+    if (!isTeacher || deletingId) return;
+    if (!confirm('Remove this comment? This cannot be undone.')) return;
+    setDeletingId(review.id);
+    try {
+      await deletePeerReview(review.id);
+      setReviews(prev => prev.filter(r => r.id !== review.id));
+    } catch (err) {
+      console.error('Failed to delete peer review:', err);
+      setError('Could not remove the comment. Please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -141,7 +183,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
     const trimmedComment = comment.trim();
     const reviewerPhotoURL = user.customAvatarUrl || user.photoURL || null;
     try {
-      await addPeerReview({
+      const newReviewRef = await addPeerReview({
         submissionId,
         reviewerId: user.uid,
         reviewerName: user.displayName || 'A classmate',
@@ -149,6 +191,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
         emojiReactions: [],
         writtenComment: trimmedComment,
       });
+      const newReviewId = newReviewRef.id;
       setComment('');
       await loadReviews();
       checkForNewBadges();
@@ -161,6 +204,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
             recipientId: submissionOwnerId,
             type: 'peer_comment',
             submissionId,
+            reviewId: newReviewId,
             lessonId,
             lessonTitle,
             fromUserId: user.uid,
@@ -180,6 +224,7 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
         await notifyAllTeachers({
           type: 'peer_review_posted',
           submissionId,
+          reviewId: newReviewId,
           lessonId,
           lessonTitle,
           fromUserId: user.uid,
@@ -262,7 +307,17 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
           {reviews.map(review => (
             <div
               key={review.id}
-              className="p-4 rounded-xl border border-[#e5ddd0] hover:border-[#c9993f]/30 transition-all bg-white"
+              ref={node => {
+                if (node) reviewRefs.current.set(review.id, node);
+                else reviewRefs.current.delete(review.id);
+              }}
+              className={`p-4 rounded-xl border transition-all bg-white ${
+                highlightedId === review.id
+                  ? 'border-[#c9993f] ring-2 ring-[#c9993f]/40'
+                  : review.reported
+                    ? 'border-red-200'
+                    : 'border-[#e5ddd0] hover:border-[#c9993f]/30'
+              }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
@@ -278,12 +333,13 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
                     </p>
                   </div>
                 </div>
-                {user && review.reviewerId !== user.uid && (
-                  reportedIds.has(review.id) ? (
-                    <span className="flex items-center gap-1 text-xs text-[#0d1b2a]/40">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Reported
+                <div className="flex items-center gap-3">
+                  {review.reported && (
+                    <span className="flex items-center gap-1 text-xs text-red-500" title="Reported by the submission owner">
+                      <AlertTriangle className="w-3.5 h-3.5" /> Reported
                     </span>
-                  ) : (
+                  )}
+                  {isOwner && user && review.reviewerId !== user.uid && !review.reported && (
                     <button
                       onClick={() => handleReport(review)}
                       disabled={reportingId === review.id}
@@ -296,8 +352,21 @@ const PeerReviewPanel: React.FC<Props> = ({ submissionId, submissionOwnerId, les
                       }
                       Report
                     </button>
-                  )
-                )}
+                  )}
+                  {isTeacher && (
+                    <button
+                      onClick={() => handleDelete(review)}
+                      disabled={deletingId === review.id}
+                      className="flex items-center gap-1 text-xs text-[#0d1b2a]/40 hover:text-red-500 transition-colors disabled:opacity-50"
+                      title="Remove this comment"
+                    >
+                      {deletingId === review.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Trash2 className="w-3.5 h-3.5" />
+                      }
+                    </button>
+                  )}
+                </div>
               </div>
 
               {review.writtenComment && (

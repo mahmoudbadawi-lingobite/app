@@ -30,9 +30,10 @@ interface Props {
   existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
   autoShowPeerReview?: boolean;
+  highlightReviewId?: string;
 }
 
-const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress, autoShowPeerReview }) => {
+const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, teacherView: _teacherView, existingSubmission, onProgress, autoShowPeerReview, highlightReviewId }) => {
   const { user } = useAuth();
   const items = lesson.items as GrammarItem[];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,8 +47,8 @@ const GrammarModule: React.FC<Props> = ({ lesson, onComplete, onBack: _onBack, t
   // Deep-linked here from a "someone commented" notification — auto-open
   // the peer review panel so the student can find (and report) it right away.
   useEffect(() => {
-    if (autoShowPeerReview) setShowPeerReview(true);
-  }, [autoShowPeerReview]);
+    if (autoShowPeerReview || highlightReviewId) setShowPeerReview(true);
+  }, [autoShowPeerReview, highlightReviewId]);
 
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
     studentId: user?.uid || '',
@@ -313,6 +314,7 @@ studentName: user?.displayName || '',
               submissionOwnerId={existingSubmission.studentId}
               lessonId={lesson.id}
               lessonTitle={existingSubmission.lessonTitle}
+              highlightReviewId={highlightReviewId}
             />
           </div>
         )}

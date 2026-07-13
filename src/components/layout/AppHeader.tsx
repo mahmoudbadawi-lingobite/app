@@ -16,10 +16,11 @@ interface AppHeaderProps {
   onNavigateToPeerFeedback?: () => void;
   onNavigateToProgress?: () => void;
   onNavigateToTeacher?: () => void;
-  onNavigateToLesson?: (lessonId: string) => void;
+  onNavigateToLesson?: (lessonId: string, reviewId?: string) => void;
+  onNavigateToSubmission?: (submissionId: string, reviewId?: string) => void;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher, onNavigateToLesson }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigateToPeerFeedback, onNavigateToProgress, onNavigateToTeacher, onNavigateToLesson, onNavigateToSubmission }) => {
   const { user, isTeacher, switchRole, openAvatarPicker } = useAuth();
 
   return (
@@ -91,7 +92,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ currentLesson, onBack, onNavigate
                   </button>
                 )}
 
-                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} onNavigateToProgress={onNavigateToProgress} onNavigateToTeacher={onNavigateToTeacher} onNavigateToLesson={onNavigateToLesson} />
+                <NotificationBell onNavigateToPeerFeedback={onNavigateToPeerFeedback} onNavigateToProgress={onNavigateToProgress} onNavigateToTeacher={onNavigateToTeacher} onNavigateToLesson={onNavigateToLesson} onNavigateToSubmission={onNavigateToSubmission} />
 
                 <div className="flex items-center gap-2.5 pl-2 border-l border-[#c9993f]/20">
                   <div className="hidden sm:block text-right">

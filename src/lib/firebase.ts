@@ -325,6 +325,18 @@ export const deletePeerReview = async (reviewId: string) => {
   await deleteDoc(doc(db, 'peer_reviews', reviewId));
 };
 
+// Marks a comment as reported directly on the document (rather than only
+// firing a notification), so the flag persists across reloads and is
+// visible to any teacher who opens the submission later, not just the one
+// who happened to be online when the report notification fired.
+export const reportPeerReview = async (reviewId: string, reporterId: string) => {
+  await updateDoc(doc(db, 'peer_reviews', reviewId), {
+    reported: true,
+    reportedBy: reporterId,
+    reportedAt: serverTimestamp(),
+  });
+};
+
 // Reviews a given student has *left* on classmates' work (used for
 // student-facing progress/engagement stats).
 export const getPeerReviewsByReviewer = async (reviewerId: string) => {

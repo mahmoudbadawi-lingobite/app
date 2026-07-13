@@ -271,6 +271,9 @@ export interface PeerReview {
   createdAt: Date;
   emojiReactions: EmojiReaction[];
   writtenComment?: string;
+  reported?: boolean;         // Persisted so the flag survives reloads and is visible to teachers
+  reportedBy?: string | null; // uid of the submission owner who reported it
+  reportedAt?: Date;
 }
 
 // --- In-App Notifications ---
@@ -282,6 +285,7 @@ export interface AppNotification {
   recipientId: string;        // uid of the user who should see this notification
   type: NotificationType;
   submissionId: string;
+  reviewId?: string;           // Lets a click jump straight to the specific comment, not just the submission
   lessonId?: string;           // Lets a click jump straight to the lesson
   lessonTitle: string;
   fromUserId: string;

@@ -37,6 +37,9 @@ const AppContent: React.FC = () => {
   const [sharedLessonNotice, setSharedLessonNotice] = useState<string | null>(null);
   const [newBadgeNotice, setNewBadgeNotice] = useState<string | null>(null);
   const [autoShowPeerReview, setAutoShowPeerReview] = useState(false);
+  // Set by the notification bell so the Teacher Dashboard can jump straight
+  // to a specific submission (and comment) instead of the generic list.
+  const [teacherDeepLink, setTeacherDeepLink] = useState<{ submissionId: string; reviewId?: string } | null>(null);
 
   // Real submissions for the signed-in student, replacing the old mock
   // data used to derive lesson progress badges and home stats.
@@ -133,10 +136,21 @@ const AppContent: React.FC = () => {
   }, [user, searchParams]);
 
   // Lets the notification bell jump a student straight to a lesson (with
-  // its peer review panel already open) instead of the classmate-browsing
-  // screen, which never shows the student's own submissions.
-  const handleNavigateToLesson = (lessonId: string) => {
-    setSearchParams({ lesson: lessonId, peerReview: '1' }, { replace: false });
+  // its peer review panel already open, scrolled to the exact comment)
+  // instead of the classmate-browsing screen, which never shows the
+  // student's own submissions.
+  const handleNavigateToLesson = (lessonId: string, reviewId?: string) => {
+    const params: Record<string, string> = { lesson: lessonId, peerReview: '1' };
+    if (reviewId) params.reviewId = reviewId;
+    setSearchParams(params, { replace: false });
+  };
+
+  // Lets the notification bell jump a teacher straight to the submission
+  // (and comment) a peer-review notification was about, instead of the
+  // generic Teacher Dashboard submissions list.
+  const handleNavigateToSubmission = (submissionId: string, reviewId?: string) => {
+    setTeacherDeepLink({ submissionId, reviewId });
+    setCurrentView('teacher');
   };
 
   const pronLessons = lessons.filter(l => l.type === 'pronunciation');
@@ -197,6 +211,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
     const existingSubmission = studentSubmissions.find(
       s => s.lessonId === activeLesson.id
     ) || null;
+    const highlightReviewId = searchParams.get('reviewId') || undefined;
 
     switch (activeLesson.type) {
       case 'pronunciation':
@@ -209,6 +224,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
             autoShowPeerReview={autoShowPeerReview}
+            highlightReviewId={highlightReviewId}
           />
         );
       case 'vocabulary':
@@ -221,6 +237,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
             autoShowPeerReview={autoShowPeerReview}
+            highlightReviewId={highlightReviewId}
           />
         );
       case 'grammar':
@@ -233,6 +250,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
             autoShowPeerReview={autoShowPeerReview}
+            highlightReviewId={highlightReviewId}
           />
         );
       case 'reading':
@@ -245,6 +263,7 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             existingSubmission={existingSubmission}
             onProgress={setLessonProgress}
             autoShowPeerReview={autoShowPeerReview}
+            highlightReviewId={highlightReviewId}
           />
         );
       default:
@@ -551,11 +570,18 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
         onNavigateToProgress={() => setCurrentView('progress')}
         onNavigateToTeacher={() => setCurrentView('teacher')}
         onNavigateToLesson={handleNavigateToLesson}
+        onNavigateToSubmission={handleNavigateToSubmission}
       />
 
       {currentView === 'home' && renderHome()}
       {currentView === 'lesson' && renderLessonModule()}
-      {currentView === 'teacher' && <TeacherDashboard />}
+      {currentView === 'teacher' && (
+        <TeacherDashboard
+          deepLinkSubmissionId={teacherDeepLink?.submissionId}
+          deepLinkReviewId={teacherDeepLink?.reviewId}
+          onDeepLinkConsumed={() => setTeacherDeepLink(null)}
+        />
+      )}
       {currentView === 'badges' && <BadgeShowcase />}
       {currentView === 'progress' && <StudentProgress />}
       {currentView === 'peer' && <PeerFeedbackBrowser />}

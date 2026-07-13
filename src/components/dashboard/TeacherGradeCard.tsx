@@ -20,6 +20,7 @@ import { fmtTimestamp } from '@/lib/firebase';
 import { avatarFallback } from '@/lib/utils';
 import { sendFeedbackEmail } from '@/lib/emailjs';
 import SubmissionReview from './SubmissionReview';
+import PeerReviewPanel from '@/components/peer/PeerReviewPanel';
 
 interface Props {
   submission: StudentSubmission;
@@ -31,9 +32,12 @@ interface Props {
     flawFlags: string[];
     answers: StudentAnswer[];
   }) => void;
+  // Set when arriving here from a "peer review posted/reported" notification,
+  // so the comment thread below can scroll to and highlight the exact comment.
+  highlightReviewId?: string;
 }
 
-const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
+const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade, highlightReviewId }) => {
   const [expanded, setExpanded] = useState(true);
   const [score, setScore] = useState(submission.totalScore?.toString() || '');
   const [writtenFeedback, setWrittenFeedback] = useState(submission.teacherWrittenFeedback || '');
@@ -237,6 +241,16 @@ const TeacherGradeCard: React.FC<Props> = ({ submission, onGrade }) => {
             comments={questionComments}
             onCommentChange={handleCommentChange}
             readOnly={isGraded}
+          />
+
+          {/* Peer Review Comments - visible to the teacher so reported/flagged
+              comments can be reviewed and removed right from the grading view */}
+          <PeerReviewPanel
+            submissionId={submission.id}
+            submissionOwnerId={submission.studentId}
+            lessonId={submission.lessonId}
+            lessonTitle={submission.lessonTitle}
+            highlightReviewId={highlightReviewId}
           />
 
           {/* Score Input */}

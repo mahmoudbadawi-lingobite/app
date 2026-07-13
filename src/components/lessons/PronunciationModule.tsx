@@ -27,6 +27,7 @@ interface Props {
   existingSubmission?: StudentSubmission | null;
   onProgress?: (progress: number) => void;
   autoShowPeerReview?: boolean;
+  highlightReviewId?: string;
 }
 
 const PronunciationModule: React.FC<Props> = ({
@@ -37,6 +38,7 @@ const PronunciationModule: React.FC<Props> = ({
   existingSubmission,
   onProgress,
   autoShowPeerReview,
+  highlightReviewId,
 }) => {
   const { user } = useAuth();
   const items = lesson.items.filter(i => i.type === 'pronunciation') as PronunciationItem[];
@@ -47,8 +49,8 @@ const PronunciationModule: React.FC<Props> = ({
   // Deep-linked here from a "someone commented" notification — auto-open
   // the peer review panel so the student can find (and report) it right away.
   useEffect(() => {
-    if (autoShowPeerReview) setShowPeerReview(true);
-  }, [autoShowPeerReview]);
+    if (autoShowPeerReview || highlightReviewId) setShowPeerReview(true);
+  }, [autoShowPeerReview, highlightReviewId]);
   const [gradeSaved, setGradeSaved] = useState(false);
   const [gradeSaveError, setGradeSaveError] = useState(false);
   const [submission, setSubmission] = useState<Partial<StudentSubmission>>({
@@ -468,6 +470,7 @@ status: 'in_progress',
               submissionOwnerId={existingSubmission.studentId}
               lessonId={lesson.id}
               lessonTitle={existingSubmission.lessonTitle}
+              highlightReviewId={highlightReviewId}
             />
           </div>
         )}
