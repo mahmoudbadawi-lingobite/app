@@ -126,7 +126,7 @@ export const evaluateAndAwardBadges = async (
         return percentages.filter(p => p >= 100).length >= criteria.threshold;
       }
       case 'category_coverage':
-        return (['pronunciation', 'vocabulary', 'grammar'] as LessonType[])
+        return (['pronunciation', 'vocabulary', 'grammar', 'reading'] as LessonType[])
           .every(t => (byType[t]?.count || 0) > 0);
       case 'score_threshold': {
         if (!criteria.lessonType) return false;

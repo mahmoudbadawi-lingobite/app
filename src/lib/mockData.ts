@@ -151,7 +151,7 @@ export const BADGES: Badge[] = [
   { id: 'badge_001', name: 'First Steps', description: 'Complete your first lesson', imageUrl: '/badges/first_steps.png', criteria: { type: 'count', threshold: 1 }, category: 'milestone', tier: 'bronze' },
   { id: 'badge_013', name: 'Getting Started', description: 'Complete 5 lessons of any kind', imageUrl: '/badges/getting_started.png', criteria: { type: 'count', threshold: 5 }, category: 'milestone', tier: 'bronze' },
   { id: 'badge_014', name: 'Dedicated Learner', description: 'Complete 15 lessons of any kind', imageUrl: '/badges/dedicated_learner.png', criteria: { type: 'count', threshold: 15 }, category: 'milestone', tier: 'silver' },
-  { id: 'badge_015', name: 'Renaissance Learner', description: 'Complete at least one pronunciation, vocabulary, and grammar lesson', imageUrl: '/badges/renaissance.png', criteria: { type: 'category_coverage', threshold: 1 }, category: 'milestone', tier: 'gold' },
+  { id: 'badge_015', name: 'Renaissance Learner', description: 'Complete at least one pronunciation, vocabulary, grammar, and reading lesson', imageUrl: '/badges/renaissance.png', criteria: { type: 'category_coverage', threshold: 1 }, category: 'milestone', tier: 'gold' },
   { id: 'badge_010', name: 'LingoBite Legend', description: 'Complete 50 lessons across all categories', imageUrl: '/badges/legend.png', criteria: { type: 'count', threshold: 50 }, category: 'milestone', tier: 'platinum' },
   { id: 'badge_016', name: 'Century Club', description: 'Rare: complete 100 lessons across all categories', imageUrl: '/badges/century_club.png', criteria: { type: 'count', threshold: 100 }, category: 'milestone', tier: 'platinum' },
 
@@ -175,6 +175,13 @@ export const BADGES: Badge[] = [
   { id: 'badge_023', name: 'Grammar Apprentice', description: 'Complete 5 grammar lessons', imageUrl: '/badges/grammar_apprentice.png', criteria: { type: 'count', threshold: 5, lessonType: 'grammar' }, category: 'grammar', tier: 'bronze' },
   { id: 'badge_005', name: 'Grammar Guardian', description: 'Complete all grammar lessons with 80%+', imageUrl: '/badges/grammar_guardian.png', criteria: { type: 'score_threshold', threshold: 80, lessonType: 'grammar' }, category: 'grammar', tier: 'gold' },
   { id: 'badge_024', name: 'Grammar Sage', description: 'Rare: complete all grammar lessons with 95%+', imageUrl: '/badges/grammar_sage.png', criteria: { type: 'score_threshold', threshold: 95, lessonType: 'grammar' }, category: 'grammar', tier: 'platinum' },
+
+  // --- Reading ---
+  { id: 'badge_030', name: 'Reading Starter', description: 'Complete your first reading lesson', imageUrl: '/badges/reading_starter.png', criteria: { type: 'count', threshold: 1, lessonType: 'reading' }, category: 'reading', tier: 'bronze' },
+  { id: 'badge_031', name: 'Reading Apprentice', description: 'Complete 5 reading lessons', imageUrl: '/badges/reading_apprentice.png', criteria: { type: 'count', threshold: 5, lessonType: 'reading' }, category: 'reading', tier: 'bronze' },
+  { id: 'badge_032', name: 'Bookworm', description: 'Complete 15 reading lessons', imageUrl: '/badges/bookworm.png', criteria: { type: 'count', threshold: 15, lessonType: 'reading' }, category: 'reading', tier: 'silver' },
+  { id: 'badge_033', name: 'Comprehension Champion', description: 'Complete all reading lessons with 80%+', imageUrl: '/badges/comprehension_champion.png', criteria: { type: 'score_threshold', threshold: 80, lessonType: 'reading' }, category: 'reading', tier: 'gold' },
+  { id: 'badge_034', name: 'Reading Sage', description: 'Rare: complete all reading lessons with 95%+', imageUrl: '/badges/reading_sage.png', criteria: { type: 'score_threshold', threshold: 95, lessonType: 'reading' }, category: 'reading', tier: 'platinum' },
 
   // --- Engagement ---
   { id: 'badge_006', name: '5-Day Streak', description: 'Practice 5 days in a row', imageUrl: '/badges/streak_5.png', criteria: { type: 'streak', threshold: 5 }, category: 'engagement', tier: 'bronze' },
