@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Trophy, Lock, Star, Flame, Crown, Target,
-  TrendingUp, Zap, BookOpen, Mic, MessageCircle, ChevronLeft
+  TrendingUp, Zap, BookOpen, Mic, MessageCircle, ChevronLeft, BookOpenCheck
 } from 'lucide-react';
 import { BADGES, MOCK_STUDENT } from '@/lib/mockData';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -35,6 +35,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   pronunciation: Mic,
   vocabulary: BookOpen,
   grammar: Target,
+  reading: BookOpenCheck,
   engagement: MessageCircle,
   milestone: Crown,
 };
@@ -116,7 +117,7 @@ const BadgeShowcase: React.FC<Props> = ({ student, onBack }) => {
 
         {/* Category Filter */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {['all', 'pronunciation', 'vocabulary', 'grammar', 'engagement', 'milestone'].map(cat => (
+          {['all', 'pronunciation', 'vocabulary', 'grammar', 'reading', 'engagement', 'milestone'].map(cat => (
             <button
               key={cat}
               onClick={() => setFilterCategory(cat)}
