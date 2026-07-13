@@ -14,7 +14,7 @@ import {
   Inbox, CheckCircle, Clock, Search,
   Users, GraduationCap, Loader2,
   Plus, BookOpen, Trash2, Edit, Mic, BookMarked, Target,
-  Square, CheckSquare, X, Share2, Check
+  Square, CheckSquare, X, Share2, Check, BookOpenCheck
 } from 'lucide-react';
 import type { StudentSubmission, Lesson } from '@/types';
 import {
@@ -272,6 +272,7 @@ const TeacherDashboard: React.FC = () => {
   const getLessonIcon = (type: string) => {
     if (type === 'pronunciation') return <Mic className="w-4 h-4 text-[#c9993f]" />;
     if (type === 'vocabulary') return <BookMarked className="w-4 h-4 text-[#38a169]" />;
+    if (type === 'reading') return <BookOpenCheck className="w-4 h-4 text-[#2563eb]" />;
     return <Target className="w-4 h-4 text-[#8b5cf6]" />;
   };
 

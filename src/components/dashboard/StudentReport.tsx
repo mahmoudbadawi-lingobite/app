@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   ChevronLeft, Loader2, Mail, CalendarDays, Trophy, Flame,
   BarChart3, BookMarked, Mic, Target, MessageSquareHeart,
-  Inbox, Send, CheckCircle, Clock, FileText,
+  Inbox, Send, CheckCircle, Clock, FileText, BookOpenCheck,
 } from 'lucide-react';
 import {
   getUserProfile, getStudentSubmissions, getPeerReviewsByReviewer,
@@ -24,6 +24,7 @@ const TYPE_META: Record<LessonType, { label: string; icon: React.ElementType; co
   pronunciation: { label: 'Pronunciation', icon: Mic, color: '#c9993f', light: 'bg-[#c9993f]/10' },
   vocabulary: { label: 'Vocabulary', icon: BookMarked, color: '#38a169', light: 'bg-[#38a169]/10' },
   grammar: { label: 'Grammar', icon: Target, color: '#8b5cf6', light: 'bg-[#8b5cf6]/10' },
+  reading: { label: 'Reading', icon: BookOpenCheck, color: '#2563eb', light: 'bg-[#2563eb]/10' },
 };
 
 interface Props {
@@ -78,8 +79,9 @@ const StudentReport: React.FC<Props> = ({ studentId, studentName, onBack }) => {
       pronunciation: { completed: 0, graded: 0, avgPercent: null },
       vocabulary: { completed: 0, graded: 0, avgPercent: null },
       grammar: { completed: 0, graded: 0, avgPercent: null },
+      reading: { completed: 0, graded: 0, avgPercent: null },
     };
-    (['pronunciation', 'vocabulary', 'grammar'] as LessonType[]).forEach(type => {
+    (['pronunciation', 'vocabulary', 'grammar', 'reading'] as LessonType[]).forEach(type => {
       const typeCompleted = completed.filter(s => s.lessonType === type);
       const typeGraded = graded.filter(s => s.lessonType === type);
       byType[type] = {
@@ -210,8 +212,8 @@ const StudentReport: React.FC<Props> = ({ studentId, studentName, onBack }) => {
         </div>
 
         {/* Breakdown by lesson type */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {(['pronunciation', 'vocabulary', 'grammar'] as LessonType[]).map(type => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {(['pronunciation', 'vocabulary', 'grammar', 'reading'] as LessonType[]).map(type => {
             const meta = TYPE_META[type];
             const data = stats.byType[type];
             return (

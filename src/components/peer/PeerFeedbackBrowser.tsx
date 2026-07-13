@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Users, Mic, BookMarked, Target, Loader2, CheckCircle,
-  Clock, MessageCircle, ChevronLeft,
+  Clock, MessageCircle, ChevronLeft, BookOpenCheck,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { getSubmissionsForPeerFeedback, fmtTimestamp } from '@/lib/firebase';
@@ -22,6 +22,7 @@ const TYPE_META: Record<LessonType, { label: string; icon: React.ElementType; ba
   pronunciation: { label: 'Pronunciation', icon: Mic, badgeBg: 'bg-[#c9993f]/10 text-[#c9993f]' },
   vocabulary: { label: 'Vocabulary', icon: BookMarked, badgeBg: 'bg-[#38a169]/10 text-[#38a169]' },
   grammar: { label: 'Grammar', icon: Target, badgeBg: 'bg-[#8b5cf6]/10 text-[#8b5cf6]' },
+  reading: { label: 'Reading', icon: BookOpenCheck, badgeBg: 'bg-[#2563eb]/10 text-[#2563eb]' },
 };
 
 const PeerFeedbackBrowser: React.FC = () => {
@@ -134,7 +135,7 @@ const PeerFeedbackBrowser: React.FC = () => {
 
         {/* Type Filter */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {(['all', 'pronunciation', 'vocabulary', 'grammar'] as const).map(type => (
+          {(['all', 'pronunciation', 'vocabulary', 'grammar', 'reading'] as const).map(type => (
             <button
               key={type}
               onClick={() => setFilterType(type)}

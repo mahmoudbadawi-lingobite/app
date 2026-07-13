@@ -10,6 +10,7 @@ import LessonCard from '@/components/lessons/LessonCard';
 import PronunciationModule from '@/components/lessons/PronunciationModule';
 import VocabularyModule from '@/components/lessons/VocabularyModule';
 import GrammarModule from '@/components/lessons/GrammarModule';
+import ReadingModule from '@/components/lessons/ReadingModule';
 import TeacherDashboard from '@/components/dashboard/TeacherDashboard';
 import BadgeShowcase from '@/components/badges/BadgeShowcase';
 import StudentProgress from '@/components/progress/StudentProgress';
@@ -19,7 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BookOpen, Mic, BookMarked, Target, Trophy, GraduationCap,
-  Sparkles, TrendingUp, Users, Zap, BarChart3, Loader2
+  Sparkles, TrendingUp, Users, Zap, BarChart3, Loader2, BookOpenCheck
 } from 'lucide-react';
 import type { Lesson, StudentSubmission } from '@/types';
 import './App.css';
@@ -129,6 +130,7 @@ const AppContent: React.FC = () => {
   const pronLessons = lessons.filter(l => l.type === 'pronunciation');
   const vocabLessons = lessons.filter(l => l.type === 'vocabulary');
   const grammarLessons = lessons.filter(l => l.type === 'grammar');
+  const readingLessons = lessons.filter(l => l.type === 'reading');
 
   const handleLessonClick = (lesson: Lesson) => {
     setActiveLesson(lesson);
@@ -209,6 +211,17 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
       case 'grammar':
         return (
           <GrammarModule
+            lesson={activeLesson}
+            onComplete={handleLessonComplete}
+            onBack={handleBackToHome}
+            teacherView={isTeacher}
+            existingSubmission={existingSubmission}
+            onProgress={setLessonProgress}
+          />
+        );
+      case 'reading':
+        return (
+          <ReadingModule
             lesson={activeLesson}
             onComplete={handleLessonComplete}
             onBack={handleBackToHome}
@@ -360,6 +373,12 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             >
               <Target className="w-3.5 h-3.5 mr-1.5" /> Grammar
             </TabsTrigger>
+            <TabsTrigger
+              value="reading"
+              className="rounded-lg px-4 py-2 text-sm data-[state=active]:bg-[#0d1b2a] data-[state=active]:text-[#faf6ef]"
+            >
+              <BookOpenCheck className="w-3.5 h-3.5 mr-1.5" /> Reading
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
@@ -451,6 +470,31 @@ const handleLessonComplete = async (submission: Partial<StudentSubmission>) => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {grammarLessons.map(lesson => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onClick={() => handleLessonClick(lesson)}
+                    progress={getLessonProgress(lesson.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reading" className="mt-6">
+            {loadingLessons ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-[#0d1b2a]/40">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading lessons...</span>
+              </div>
+            ) : readingLessons.length === 0 ? (
+              <div className="text-center py-16">
+                <BookOpenCheck className="w-10 h-10 text-[#0d1b2a]/20 mx-auto mb-3" />
+                <p className="text-[#0d1b2a]/40 font-medium">No reading lessons published yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {readingLessons.map(lesson => (
                   <LessonCard
                     key={lesson.id}
                     lesson={lesson}

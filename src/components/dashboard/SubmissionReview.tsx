@@ -11,7 +11,7 @@ import AnnotationImageViewer from '@/components/lessons/AnnotationImageViewer';
 import type { Lesson, StudentSubmission, StudentAnswer } from '@/types';
 import {
   CheckCircle, XCircle, Mic, BookOpen, Loader2,
-  MessageSquare, Volume2
+  MessageSquare, Volume2, BookOpenCheck, ThumbsUp, ThumbsDown, Award
 } from 'lucide-react';
 
 interface Props {
@@ -69,6 +69,25 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
         </Badge>
       </div>
 
+      {lesson.type === 'reading' && lesson.readingPassage && (
+        <Card className="lb-card overflow-hidden">
+          <div className="bg-[#0d1b2a] px-5 py-3 flex items-center gap-2">
+            <BookOpenCheck className="w-4 h-4 text-[#c9993f]" />
+            <span className="text-xs font-medium text-[#faf6ef]/80 uppercase tracking-wider">Reading Passage</span>
+          </div>
+          <div className="p-5 space-y-3">
+            {lesson.readingImageUrl && (
+              <img
+                src={lesson.readingImageUrl}
+                alt="Passage illustration"
+                className="w-full max-h-64 object-cover rounded-xl border border-[#e5ddd0]"
+              />
+            )}
+            <p className="text-sm text-[#0d1b2a] leading-relaxed whitespace-pre-wrap">{lesson.readingPassage}</p>
+          </div>
+        </Card>
+      )}
+
       {(lesson.items as any[]).map((item: any, idx: number) => {
         const answer = getAnswer(item.id, idx);
         return (
@@ -78,9 +97,14 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
               <span className="text-xs font-medium text-[#faf6ef]/60 uppercase tracking-wider">
                 Question {idx + 1}
               </span>
-              <span className="text-xs text-[#c9993f] capitalize">
-                {item.type?.replace(/_/g, ' ')}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1 text-xs text-[#c9993f] font-medium">
+                  <Award className="w-3.5 h-3.5" /> {item.marks ?? 1} {(item.marks ?? 1) === 1 ? 'mark' : 'marks'}
+                </span>
+                <span className="text-xs text-[#c9993f] capitalize">
+                  {item.type?.replace(/_/g, ' ')}
+                </span>
+              </div>
             </div>
 
             <div className="p-5 space-y-4">
@@ -242,6 +266,107 @@ const SubmissionReview: React.FC<Props> = ({ submission, comments, onCommentChan
                       No audio recorded
                     </div>
                   )}
+                </>
+              )}
+
+              {/* READING MCQ */}
+              {item.type === 'reading_mcq' && (
+                <>
+                  <p className="font-medium text-[#0d1b2a]">{item.question}</p>
+                  <div className="space-y-2">
+                    {item.options?.map((opt: string, i: number) => {
+                      const selected = (answer as any)?.selectedOptionIndex === i;
+                      const isCorrect = i === item.correctOptionIndex;
+                      return (
+                        <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm ${
+                          selected && isCorrect ? 'bg-green-50 border-green-300 text-green-800' :
+                          selected && !isCorrect ? 'bg-red-50 border-red-300 text-red-700' :
+                          isCorrect ? 'bg-green-50/50 border-green-200 text-green-700' :
+                          'bg-[#faf6ef] border-[#e5ddd0] text-[#0d1b2a]/60'
+                        }`}>
+                          <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {String.fromCharCode(65 + i)}
+                          </span>
+                          <span className="flex-1">{opt}</span>
+                          {selected && isCorrect && <CheckCircle className="w-4 h-4 text-green-600" />}
+                          {selected && !isCorrect && <XCircle className="w-4 h-4 text-red-500" />}
+                          {!selected && isCorrect && <CheckCircle className="w-4 h-4 text-green-400 opacity-60" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {item.explanation && (
+                    <p className="text-xs text-[#0d1b2a]/50 bg-[#faf6ef] rounded-lg p-3 border border-[#e5ddd0]">
+                      💡 {item.explanation}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {/* READING TRUE / FALSE */}
+              {item.type === 'reading_tf' && (
+                <>
+                  <p className="font-medium text-[#0d1b2a]">{item.statement}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[true, false].map(val => {
+                      const selected = (answer as any)?.selectedAnswer === val;
+                      const isCorrect = val === item.correctAnswer;
+                      return (
+                        <div key={String(val)} className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium ${
+                          selected && isCorrect ? 'bg-green-50 border-green-300 text-green-800' :
+                          selected && !isCorrect ? 'bg-red-50 border-red-300 text-red-700' :
+                          isCorrect ? 'bg-green-50/50 border-green-200 text-green-700' :
+                          'bg-[#faf6ef] border-[#e5ddd0] text-[#0d1b2a]/60'
+                        }`}>
+                          {val ? <ThumbsUp className="w-4 h-4" /> : <ThumbsDown className="w-4 h-4" />}
+                          {val ? 'True' : 'False'}
+                          {selected && isCorrect && <CheckCircle className="w-4 h-4" />}
+                          {selected && !isCorrect && <XCircle className="w-4 h-4" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {item.explanation && (
+                    <p className="text-xs text-[#0d1b2a]/50 bg-[#faf6ef] rounded-lg p-3 border border-[#e5ddd0]">
+                      💡 {item.explanation}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {/* READING ESSAY */}
+              {item.type === 'reading_essay' && (
+                <>
+                  <p className="font-medium text-[#0d1b2a]">{item.prompt}</p>
+                  <div className="bg-white rounded-xl border border-[#e5ddd0] p-4">
+                    <p className="text-sm text-[#0d1b2a] whitespace-pre-wrap">
+                      {(answer as any)?.response || <span className="text-[#0d1b2a]/30 italic">No answer submitted</span>}
+                    </p>
+                  </div>
+                  {item.sampleAnswer && (
+                    <p className="text-xs text-[#0d1b2a]/50 bg-[#faf6ef] rounded-lg p-3 border border-[#e5ddd0]">
+                      Sample answer: {item.sampleAnswer}
+                    </p>
+                  )}
+                  <p className="text-xs text-[#0d1b2a]/40 italic">Graded manually — worth {item.marks ?? 1} {(item.marks ?? 1) === 1 ? 'mark' : 'marks'}.</p>
+                </>
+              )}
+
+              {/* READING SHORT ANSWER */}
+              {item.type === 'reading_short_answer' && (
+                <>
+                  <p className="font-medium text-[#0d1b2a]">{item.question}</p>
+                  <div className="bg-white rounded-xl border border-[#e5ddd0] p-4">
+                    <p className="text-sm text-[#0d1b2a] whitespace-pre-wrap">
+                      {(answer as any)?.response || <span className="text-[#0d1b2a]/30 italic">No answer submitted</span>}
+                    </p>
+                  </div>
+                  {item.sampleAnswer && (
+                    <p className="text-xs text-[#0d1b2a]/50 bg-[#faf6ef] rounded-lg p-3 border border-[#e5ddd0]">
+                      Sample answer: {item.sampleAnswer}
+                    </p>
+                  )}
+                  <p className="text-xs text-[#0d1b2a]/40 italic">Graded manually — worth {item.marks ?? 1} {(item.marks ?? 1) === 1 ? 'mark' : 'marks'}.</p>
                 </>
               )}
 

@@ -14,18 +14,24 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/fi
 import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
   Mic, BookMarked, Target, Youtube, CheckCircle,
-  GripVertical, X, ArrowLeft, ImageIcon, Loader2, MousePointerClick
+  GripVertical, X, ArrowLeft, ImageIcon, Loader2, MousePointerClick,
+  BookOpenCheck, Award
 } from 'lucide-react';
 import type { LessonType, Lesson } from '@/types';
 
 // ---- Item type helpers ----
-type ItemType = 'grammar_mcq' | 'grammar_sentence' | 'vocab_mcq' | 'vocab_fillin' | 'vocab_image' | 'pronunciation';
+type ItemType =
+  | 'grammar_mcq' | 'grammar_sentence'
+  | 'vocab_mcq' | 'vocab_fillin' | 'vocab_image'
+  | 'pronunciation'
+  | 'reading_mcq' | 'reading_tf' | 'reading_essay' | 'reading_short_answer';
 
 const defaultItem = (type: ItemType, order: number): any => {
-  const base = { id: `item_${Date.now()}_${order}`, type, order, instructions: '' };
+  const base = { id: `item_${Date.now()}_${order}`, type, order, instructions: '', marks: 1 };
   switch (type) {
     case 'grammar_mcq':
     case 'vocab_mcq':
+    case 'reading_mcq':
       return { ...base, question: '', options: ['', '', '', ''], correctOptionIndex: 0, explanation: '' };
     case 'grammar_sentence':
       return { ...base, prompt: '', wordBank: [], targetGrammarRule: '', minWordCount: 5, exampleAnswer: '' };
@@ -35,17 +41,39 @@ const defaultItem = (type: ItemType, order: number): any => {
       return { ...base, imageUrl: '', annotations: [] };
     case 'pronunciation':
       return { ...base, targetPhrase: '', nativeAudioUrl: '', hint: '' };
+    case 'reading_tf':
+      return { ...base, statement: '', correctAnswer: true, explanation: '' };
+    case 'reading_essay':
+      return { ...base, prompt: '', minWordCount: 50, guidance: '' };
+    case 'reading_short_answer':
+      return { ...base, question: '', sampleAnswer: '' };
     default:
       return base;
   }
 };
+
+// ---- Marks Editor (shared across every question type) ----
+const MarksEditor: React.FC<{ marks: number; onChange: (marks: number) => void }> = ({ marks, onChange }) => (
+  <div className="flex items-center gap-2">
+    <Award className="w-4 h-4 text-[#c9993f] flex-shrink-0" />
+    <label className="text-xs font-medium text-[#0d1b2a]/60 whitespace-nowrap">Marks for this question</label>
+    <Input
+      type="number"
+      min={0}
+      step={0.5}
+      value={marks}
+      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      className="lb-input w-20 text-center"
+    />
+  </div>
+);
 
 // ---- MCQ Editor ----
 const MCQEditor: React.FC<{ item: any; onChange: (item: any) => void; onDelete: () => void }> = ({ item, onChange, onDelete }) => (
   <div className="space-y-3">
     <div className="flex items-center justify-between">
       <span className="text-xs font-semibold text-[#0d1b2a]/50 uppercase tracking-wider">
-        {item.type === 'grammar_mcq' ? 'Grammar MCQ' : 'Vocabulary MCQ'}
+        {item.type === 'grammar_mcq' ? 'Grammar MCQ' : item.type === 'reading_mcq' ? 'Reading MCQ' : 'Vocabulary MCQ'}
       </span>
       <button onClick={onDelete} className="text-red-400 hover:text-red-600 transition-colors">
         <Trash2 className="w-4 h-4" />
@@ -379,6 +407,104 @@ const ImageAnnotationEditor: React.FC<{ item: any; onChange: (item: any) => void
   );
 };
 
+// ---- True / False Editor ----
+const TrueFalseEditor: React.FC<{ item: any; onChange: (item: any) => void; onDelete: () => void }> = ({ item, onChange, onDelete }) => (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-semibold text-[#0d1b2a]/50 uppercase tracking-wider">True / False</span>
+      <button onClick={onDelete} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+    <Textarea
+      value={item.statement}
+      onChange={e => onChange({ ...item, statement: e.target.value })}
+      placeholder="Enter a statement about the passage..."
+      rows={2}
+      className="lb-input resize-none"
+    />
+    <div className="flex gap-2">
+      {[true, false].map(val => (
+        <button
+          key={String(val)}
+          onClick={() => onChange({ ...item, correctAnswer: val })}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+            item.correctAnswer === val
+              ? 'bg-[#38a169] border-[#38a169] text-white'
+              : 'bg-white border-[#e5ddd0] text-[#0d1b2a]/60 hover:border-[#c9993f]'
+          }`}
+        >
+          {item.correctAnswer === val && <CheckCircle className="w-4 h-4" />}
+          {val ? 'True' : 'False'}
+        </button>
+      ))}
+    </div>
+    <Input
+      value={item.explanation || ''}
+      onChange={e => onChange({ ...item, explanation: e.target.value })}
+      placeholder="Explanation (optional)..."
+      className="lb-input text-sm"
+    />
+  </div>
+);
+
+// ---- Essay Question Editor ----
+const EssayEditor: React.FC<{ item: any; onChange: (item: any) => void; onDelete: () => void }> = ({ item, onChange, onDelete }) => (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-semibold text-[#0d1b2a]/50 uppercase tracking-wider">Essay Question</span>
+      <button onClick={onDelete} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+    <Textarea
+      value={item.prompt}
+      onChange={e => onChange({ ...item, prompt: e.target.value })}
+      placeholder="Write the essay prompt..."
+      rows={3}
+      className="lb-input resize-none"
+    />
+    <div className="flex items-center gap-2">
+      <label className="text-xs text-[#0d1b2a]/50 whitespace-nowrap">Minimum word count</label>
+      <Input
+        type="number"
+        min={0}
+        value={item.minWordCount ?? 50}
+        onChange={e => onChange({ ...item, minWordCount: parseInt(e.target.value) || 0 })}
+        className="lb-input w-24"
+      />
+    </div>
+    <Textarea
+      value={item.guidance || ''}
+      onChange={e => onChange({ ...item, guidance: e.target.value })}
+      placeholder="Guidance / rubric shown to students (optional)..."
+      rows={2}
+      className="lb-input resize-none text-sm"
+    />
+    <p className="text-xs text-[#0d1b2a]/40">Essay answers are graded manually by the teacher.</p>
+  </div>
+);
+
+// ---- Short Answer Editor ----
+const ShortAnswerEditor: React.FC<{ item: any; onChange: (item: any) => void; onDelete: () => void }> = ({ item, onChange, onDelete }) => (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-semibold text-[#0d1b2a]/50 uppercase tracking-wider">Short Answer</span>
+      <button onClick={onDelete} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+    <Textarea
+      value={item.question}
+      onChange={e => onChange({ ...item, question: e.target.value })}
+      placeholder="Enter the short-answer question..."
+      rows={2}
+      className="lb-input resize-none"
+    />
+    <Input
+      value={item.sampleAnswer || ''}
+      onChange={e => onChange({ ...item, sampleAnswer: e.target.value })}
+      placeholder="Sample/model answer for the teacher (optional)..."
+      className="lb-input text-sm"
+    />
+    <p className="text-xs text-[#0d1b2a]/40">Short answers are graded manually by the teacher.</p>
+  </div>
+);
+
 // ---- Main LessonCreator ----
 interface Props {
   onBack: () => void;
@@ -392,6 +518,8 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
   const [description, setDescription] = useState(editLesson?.description || '');
   const [lessonType, setLessonType] = useState<LessonType>(editLesson?.type || 'grammar');
   const [youtubeUrl, setYoutubeUrl] = useState(editLesson?.youtubeUrl || '');
+  const [readingPassage, setReadingPassage] = useState(editLesson?.readingPassage || '');
+  const [readingImageUrl, setReadingImageUrl] = useState(editLesson?.readingImageUrl || '');
   const [items, setItems] = useState<any[]>((editLesson?.items as any[]) || []);
   const [saving, setSaving] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -419,6 +547,7 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
 
   const handleSave = async (status: 'draft' | 'published') => {
     if (!title.trim()) { setError('Please enter a lesson title.'); return; }
+    if (lessonType === 'reading' && !readingPassage.trim()) { setError('Please add a reading passage.'); return; }
     if (items.length === 0) { setError('Please add at least one question.'); return; }
     setError('');
     setSaving(true);
@@ -432,8 +561,11 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
         teacherName: user?.displayName || '',
         status,
         order: editLesson?.order || Date.now(),
-        items: items.map((item, i) => ({ ...item, order: i })),
+        items: items.map((item, i) => ({ ...item, order: i, marks: item.marks ?? 1 })),
         updatedAt: serverTimestamp(),
+        ...(lessonType === 'reading'
+          ? { readingPassage: readingPassage.trim(), readingImageUrl: readingImageUrl.trim() }
+          : { readingPassage: '', readingImageUrl: '' }),
         ...(editLesson ? {} : { createdAt: serverTimestamp() }),
       };
       if (editLesson) {
@@ -457,6 +589,11 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
     { type: 'vocab_mcq', label: 'Multiple Choice' },
     { type: 'vocab_fillin', label: 'Fill in the Blank' },
     { type: 'vocab_image', label: 'Image Annotation' },
+  ] : lessonType === 'reading' ? [
+    { type: 'reading_mcq', label: 'Multiple Choice' },
+    { type: 'reading_tf', label: 'True / False' },
+    { type: 'reading_essay', label: 'Essay Question' },
+    { type: 'reading_short_answer', label: 'Short Answer' },
   ] : [
     { type: 'pronunciation', label: 'Pronunciation' },
   ];
@@ -499,11 +636,12 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
           {/* Lesson Type */}
           <div>
             <p className="text-sm font-medium text-[#0d1b2a]/60 mb-2">Lesson Type</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {([
                 { value: 'grammar', label: 'Grammar', icon: <Target className="w-4 h-4" /> },
                 { value: 'vocabulary', label: 'Vocabulary', icon: <BookMarked className="w-4 h-4" /> },
                 { value: 'pronunciation', label: 'Pronunciation', icon: <Mic className="w-4 h-4" /> },
+                { value: 'reading', label: 'Reading', icon: <BookOpenCheck className="w-4 h-4" /> },
               ] as const).map(({ value, label, icon }) => (
                 <button
                   key={value}
@@ -542,6 +680,38 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
               </div>
             )}
           </div>
+
+          {/* Reading Passage (Reading lessons only) */}
+          {lessonType === 'reading' && (
+            <div className="space-y-3 pt-2 border-t border-[#e5ddd0]">
+              <p className="text-sm font-medium text-[#0d1b2a]/60 flex items-center gap-1.5">
+                <BookOpenCheck className="w-4 h-4 text-[#c9993f]" /> Reading Passage *
+              </p>
+              <Textarea
+                value={readingPassage}
+                onChange={e => setReadingPassage(e.target.value)}
+                placeholder="Paste or write the reading passage students will read before answering..."
+                rows={8}
+                className="lb-input resize-y"
+              />
+              <div>
+                <p className="text-sm font-medium text-[#0d1b2a]/60 mb-2 flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-[#c9993f]" /> Passage Image (optional)
+                </p>
+                <Input
+                  value={readingImageUrl}
+                  onChange={e => setReadingImageUrl(e.target.value)}
+                  placeholder="Paste an image link (optional)..."
+                  className="lb-input"
+                />
+                {readingImageUrl && (
+                  <div className="mt-3 rounded-xl overflow-hidden border border-[#e5ddd0] max-h-64">
+                    <img src={readingImageUrl} alt="Passage" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Questions */}
@@ -561,7 +731,7 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
                 <GripVertical className="w-4 h-4 text-[#0d1b2a]/20" />
                 <span className="text-sm font-medium text-[#0d1b2a] flex-1 text-left">
                   Q{idx + 1}: {
-                    item.question || item.prompt || item.targetPhrase || item.sentenceTemplate ||
+                    item.question || item.prompt || item.targetPhrase || item.sentenceTemplate || item.statement ||
                     (item.type === 'vocab_image'
                       ? (item.imageUrl ? `Image with ${item.annotations.length} point${item.annotations.length === 1 ? '' : 's'}` : <span className="text-[#0d1b2a]/30 italic">Untitled question</span>)
                       : <span className="text-[#0d1b2a]/30 italic">Untitled question</span>)
@@ -577,8 +747,8 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
               </button>
 
               {expandedIdx === idx && (
-                <div className="p-4 pt-0 border-t border-[#e5ddd0]">
-                  <div className="mb-3">
+                <div className="p-4 pt-0 border-t border-[#e5ddd0] space-y-3">
+                  <div>
                     <Input
                       value={item.instructions}
                       onChange={e => updateItem(idx, { ...item, instructions: e.target.value })}
@@ -586,7 +756,11 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
                       className="lb-input text-sm"
                     />
                   </div>
-                  {(item.type === 'grammar_mcq' || item.type === 'vocab_mcq') && (
+                  <MarksEditor
+                    marks={item.marks ?? 1}
+                    onChange={m => updateItem(idx, { ...item, marks: m })}
+                  />
+                  {(item.type === 'grammar_mcq' || item.type === 'vocab_mcq' || item.type === 'reading_mcq') && (
                     <MCQEditor item={item} onChange={u => updateItem(idx, u)} onDelete={() => deleteItem(idx)} />
                   )}
                   {item.type === 'vocab_fillin' && (
@@ -600,6 +774,15 @@ const LessonCreator: React.FC<Props> = ({ onBack, onSaved, editLesson }) => {
                   )}
                   {item.type === 'pronunciation' && (
                     <PronunciationEditor item={item} onChange={u => updateItem(idx, u)} onDelete={() => deleteItem(idx)} />
+                  )}
+                  {item.type === 'reading_tf' && (
+                    <TrueFalseEditor item={item} onChange={u => updateItem(idx, u)} onDelete={() => deleteItem(idx)} />
+                  )}
+                  {item.type === 'reading_essay' && (
+                    <EssayEditor item={item} onChange={u => updateItem(idx, u)} onDelete={() => deleteItem(idx)} />
+                  )}
+                  {item.type === 'reading_short_answer' && (
+                    <ShortAnswerEditor item={item} onChange={u => updateItem(idx, u)} onDelete={() => deleteItem(idx)} />
                   )}
                 </div>
               )}

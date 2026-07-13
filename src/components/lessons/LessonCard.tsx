@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Mic, BookOpen, Target, Clock, BarChart3, ArrowRight,
-  CheckCircle, Play, Share2, Check
+  CheckCircle, Play, Share2, Check, BookOpenCheck
 } from 'lucide-react';
 import type { Lesson } from '@/types';
 import { buildLessonShareUrl, copyToClipboard } from '@/lib/utils';
@@ -36,6 +36,12 @@ const typeConfig = {
     color: 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/20',
     badgeBg: 'bg-[#8b5cf6]/10 text-[#8b5cf6]',
     gradient: 'from-[#8b5cf6]/20 to-[#0d1b2a]/5',
+  },
+  reading: {
+    icon: BookOpenCheck,
+    color: 'bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/20',
+    badgeBg: 'bg-[#2563eb]/10 text-[#2563eb]',
+    gradient: 'from-[#2563eb]/20 to-[#0d1b2a]/5',
   },
 };
 

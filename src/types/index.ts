@@ -21,7 +21,7 @@ export interface UserProfile {
 
 // --- Lessons ---
 
-export type LessonType = 'pronunciation' | 'vocabulary' | 'grammar';
+export type LessonType = 'pronunciation' | 'vocabulary' | 'grammar' | 'reading';
 export type LessonStatus = 'draft' | 'published' | 'archived';
 
 export interface Lesson {
@@ -37,6 +37,9 @@ export interface Lesson {
   updatedAt: Date;
   items: LessonItem[];
   order: number;
+  // --- Reading Comprehension lessons only ---
+  readingPassage?: string;      // The passage text students read before answering
+  readingImageUrl?: string;     // Optional supporting image (via link), shown with the passage
 }
 
 export type LessonItem =
@@ -45,13 +48,18 @@ export type LessonItem =
   | VocabularyImageItem
   | VocabularyMCQItem
   | GrammarMCQItem
-  | GrammarSentenceItem;
+  | GrammarSentenceItem
+  | ReadingMCQItem
+  | ReadingTrueFalseItem
+  | ReadingEssayItem
+  | ReadingShortAnswerItem;
 
 export interface BaseLessonItem {
   id: string;
   type: string;
   order: number;
   instructions: string;
+  marks?: number;             // Points this question is worth (teacher-editable, default 1)
 }
 
 export interface PronunciationItem extends BaseLessonItem {
@@ -117,6 +125,39 @@ export interface GrammarSentenceItem extends BaseLessonItem {
   exampleAnswer?: string;
 }
 
+// --- Reading Comprehension ---
+// A reading lesson displays one shared passage (+ optional image) at the
+// lesson level (see Lesson.readingPassage / readingImageUrl above), then
+// asks a mix of the four question types below.
+
+export interface ReadingMCQItem extends BaseLessonItem {
+  type: 'reading_mcq';
+  question: string;
+  options: string[];
+  correctOptionIndex: number;
+  explanation?: string;
+}
+
+export interface ReadingTrueFalseItem extends BaseLessonItem {
+  type: 'reading_tf';
+  statement: string;
+  correctAnswer: boolean;
+  explanation?: string;
+}
+
+export interface ReadingEssayItem extends BaseLessonItem {
+  type: 'reading_essay';
+  prompt: string;
+  minWordCount?: number;
+  guidance?: string;          // Optional guidance/rubric shown to the student
+}
+
+export interface ReadingShortAnswerItem extends BaseLessonItem {
+  type: 'reading_short_answer';
+  question: string;
+  sampleAnswer?: string;      // Optional model answer, shown to the teacher only
+}
+
 // --- Student Submissions ---
 
 export type SubmissionStatus = 'in_progress' | 'submitted' | 'graded';
@@ -152,7 +193,10 @@ export type StudentAnswer =
   | FillInAnswer
   | ImageAnnotationAnswer
   | MCQAnswer
-  | SentenceAnswer;
+  | SentenceAnswer
+  | TrueFalseAnswer
+  | EssayAnswer
+  | ShortAnswerAnswer;
 
 export interface BaseStudentAnswer {
   itemId: string;
@@ -183,7 +227,7 @@ export interface ImageAnnotationAnswer extends BaseStudentAnswer {
 }
 
 export interface MCQAnswer extends BaseStudentAnswer {
-  itemType: 'vocab_mcq' | 'grammar_mcq';
+  itemType: 'vocab_mcq' | 'grammar_mcq' | 'reading_mcq';
   selectedOptionIndex: number;
   isCorrect: boolean;         // Auto-graded
 }
@@ -193,6 +237,26 @@ export interface SentenceAnswer extends BaseStudentAnswer {
   sentence: string;
   wordsUsed: string[];
   teacherScore?: number;
+  teacherComment?: string;
+}
+
+export interface TrueFalseAnswer extends BaseStudentAnswer {
+  itemType: 'reading_tf';
+  selectedAnswer: boolean;
+  isCorrect: boolean;         // Auto-graded
+}
+
+export interface EssayAnswer extends BaseStudentAnswer {
+  itemType: 'reading_essay';
+  response: string;
+  teacherScore?: number;      // Manually graded, 0-item.marks
+  teacherComment?: string;
+}
+
+export interface ShortAnswerAnswer extends BaseStudentAnswer {
+  itemType: 'reading_short_answer';
+  response: string;
+  teacherScore?: number;      // Manually graded, 0-item.marks
   teacherComment?: string;
 }
 
@@ -241,7 +305,7 @@ export interface Badge {
   description: string;
   imageUrl: string;
   criteria: BadgeCriteria;
-  category: 'pronunciation' | 'vocabulary' | 'grammar' | 'engagement' | 'milestone';
+  category: 'pronunciation' | 'vocabulary' | 'grammar' | 'reading' | 'engagement' | 'milestone';
   tier: 'bronze' | 'silver' | 'gold' | 'platinum';
 }
 
